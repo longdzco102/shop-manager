@@ -17,10 +17,10 @@ const ProductsPage = {
             <div class="table-container">
                 <table>
                     <thead><tr>
-                        <th>ID</th><th>Tên sản phẩm</th><th>Giá</th><th>Tồn kho</th><th>Danh mục</th><th>Ngày tạo</th>${isAdmin ? '<th>Hành động</th>' : ''}
+                        <th>ID</th><th>Ảnh</th><th>Tên sản phẩm</th><th>Giá</th><th>Tồn kho</th><th>Danh mục</th><th>Ngày tạo</th>${isAdmin ? '<th>Hành động</th>' : ''}
                     </tr></thead>
                     <tbody id="products-tbody">
-                        <tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>
+                        <tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -65,7 +65,7 @@ const ProductsPage = {
         if (!tbody) return;
 
         if (products.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><p>Không tìm thấy sản phẩm</p></div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><p>Không tìm thấy sản phẩm</p></div></td></tr>`;
             return;
         }
 
@@ -78,6 +78,11 @@ const ProductsPage = {
             return `
                 <tr>
                     <td>#${p.id}</td>
+                    <td>
+                        <div class="product-img-thumb">
+                            <img src="${p.image_url || 'https://via.placeholder.com/40?text=No+Img'}" onerror="this.src='https://via.placeholder.com/40?text=Error'">
+                        </div>
+                    </td>
                     <td style="font-weight:500;color:var(--text-primary)">${p.name}</td>
                     <td style="color:var(--accent-primary);font-weight:600">${App.formatCurrency(p.price)}</td>
                     <td><span class="status-badge ${stockStatus}">${stockLabel}</span></td>
@@ -106,6 +111,10 @@ const ProductsPage = {
                     <label>Tên sản phẩm *</label>
                     <input type="text" id="pf-name" value="${product ? product.name : ''}" required>
                 </div>
+                <div class="form-group">
+                    <label>Link ảnh (URL)</label>
+                    <input type="text" id="pf-image" value="${product ? (product.image_url || '') : ''}" placeholder="https://example.com/image.jpg">
+                </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Giá (VND) *</label>
@@ -131,6 +140,7 @@ const ProductsPage = {
             e.preventDefault();
             const data = {
                 name: document.getElementById('pf-name').value,
+                image_url: document.getElementById('pf-image').value,
                 price: parseFloat(document.getElementById('pf-price').value),
                 stock: parseInt(document.getElementById('pf-stock').value) || 0,
                 category: document.getElementById('pf-category').value

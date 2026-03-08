@@ -42,15 +42,22 @@ async function getOne(req, res) {
 // Create product
 async function create(req, res) {
     try {
-        const { name, price, stock, category } = req.body;
+        const { name, price, stock, category, image_url } = req.body;
         if (!name || price === undefined) {
             return res.status(400).json({ error: 'Name and price are required.' });
         }
         const [result] = await db.query(
-            'INSERT INTO products (name, price, stock, category) VALUES (?, ?, ?, ?)',
-            [name, price, stock || 0, category || '']
+            'INSERT INTO products (name, price, stock, category, image_url) VALUES (?, ?, ?, ?, ?)',
+            [name, price, stock || 0, category || '', image_url || '']
         );
-        res.status(201).json({ id: result.insertId, name, price, stock: stock || 0, category: category || '' });
+        res.status(201).json({
+            id: result.insertId,
+            name,
+            price,
+            stock: stock || 0,
+            category: category || '',
+            image_url: image_url || ''
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -59,13 +66,13 @@ async function create(req, res) {
 // Update product
 async function update(req, res) {
     try {
-        const { name, price, stock, category } = req.body;
+        const { name, price, stock, category, image_url } = req.body;
         const [result] = await db.query(
-            'UPDATE products SET name = ?, price = ?, stock = ?, category = ? WHERE id = ?',
-            [name, price, stock, category, req.params.id]
+            'UPDATE products SET name = ?, price = ?, stock = ?, category = ?, image_url = ? WHERE id = ?',
+            [name, price, stock, category, image_url, req.params.id]
         );
         if (result.affectedRows === 0) return res.status(404).json({ error: 'Product not found.' });
-        res.json({ id: parseInt(req.params.id), name, price, stock, category });
+        res.json({ id: parseInt(req.params.id), name, price, stock, category, image_url });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

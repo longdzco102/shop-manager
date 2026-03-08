@@ -19,7 +19,20 @@ CREATE TABLE IF NOT EXISTS products (
     price DECIMAL(12, 2) NOT NULL DEFAULT 0,
     stock INT NOT NULL DEFAULT 0,
     category VARCHAR(100) DEFAULT '',
+    image_url TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Bảng nhập hàng (Procurements)
+CREATE TABLE IF NOT EXISTS procurements (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  product_id INT NOT NULL,
+  quantity INT NOT NULL,
+  purchase_price DECIMAL(12, 2) NOT NULL DEFAULT 0,
+  supplier VARCHAR(200) DEFAULT '',
+  procurement_date DATE NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
 -- Sales table

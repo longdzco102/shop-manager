@@ -21,6 +21,7 @@ app.use('/api/sales', require('./routes/sales'));
 app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/procurements', require('./routes/procurements'));
 
 // SPA fallback - serve index.html for all non-API routes
 app.get('*', (req, res) => {
@@ -52,7 +53,30 @@ async function initDB() {
             price DECIMAL(12, 2) NOT NULL DEFAULT 0,
             stock INT NOT NULL DEFAULT 0,
             category VARCHAR(100) DEFAULT '',
+            image_url TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
+
+        // Migration: Add image_url to products if not exist (for existing DBs)
+        try {
+            const [cols] = await db.query('SHOW COLUMNS FROM products LIKE ?', ['image_url']);
+            if (cols.length === 0) {
+                await db.query('ALTER TABLE products ADD COLUMN image_url TEXT');
+                console.log('✅ Migration: Added image_url to products');
+            }
+        } catch (err) {
+            console.error('Migration failed:', err.message);
+        }
+
+        await db.query(`CREATE TABLE IF NOT EXISTS procurements (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            product_id INT NOT NULL,
+            quantity INT NOT NULL,
+            purchase_price DECIMAL(12, 2) NOT NULL DEFAULT 0,
+            supplier VARCHAR(200) DEFAULT '',
+            procurement_date DATE NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products(id)
         )`);
 
         await db.query(`CREATE TABLE IF NOT EXISTS sales (

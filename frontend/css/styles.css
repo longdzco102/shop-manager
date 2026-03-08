@@ -51,7 +51,9 @@
 }
 
 /* Reset */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -72,10 +74,23 @@ body {
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
 
 /* ======= LOGIN SCREEN ======= */
 .login-screen {
@@ -111,8 +126,15 @@ body {
 }
 
 @keyframes float {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-30px) rotate(5deg); }
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-30px) rotate(5deg);
+    }
 }
 
 .login-container {
@@ -132,8 +154,17 @@ body {
 }
 
 @keyframes pulse {
-    0%, 100% { opacity: 0.15; transform: scale(1); }
-    50% { opacity: 0.25; transform: scale(1.1); }
+
+    0%,
+    100% {
+        opacity: 0.15;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.25;
+        transform: scale(1.1);
+    }
 }
 
 .login-card {
@@ -149,8 +180,15 @@ body {
 }
 
 @keyframes slideUp {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .login-header {
@@ -455,7 +493,7 @@ body {
     transition: var(--transition);
 }
 
-.sidebar.collapsed ~ .main-content {
+.sidebar.collapsed~.main-content {
     margin-left: 0;
 }
 
@@ -501,8 +539,15 @@ body {
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ======= CARDS ======= */
@@ -573,12 +618,35 @@ body {
     margin-bottom: 16px;
 }
 
-.stat-card .stat-icon.revenue { background: var(--success-bg); color: var(--success); }
-.stat-card .stat-icon.expenses { background: var(--danger-bg); color: var(--danger); }
-.stat-card .stat-icon.profit { background: var(--info-bg); color: var(--info); }
-.stat-card .stat-icon.products { background: var(--warning-bg); color: var(--warning); }
-.stat-card .stat-icon.sales { background: rgba(139, 92, 246, 0.1); color: var(--accent-secondary); }
-.stat-card .stat-icon.today { background: rgba(99, 102, 241, 0.1); color: var(--accent-primary); }
+.stat-card .stat-icon.revenue {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.stat-card .stat-icon.expenses {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.stat-card .stat-icon.profit {
+    background: var(--info-bg);
+    color: var(--info);
+}
+
+.stat-card .stat-icon.products {
+    background: var(--warning-bg);
+    color: var(--warning);
+}
+
+.stat-card .stat-icon.sales {
+    background: rgba(139, 92, 246, 0.1);
+    color: var(--accent-secondary);
+}
+
+.stat-card .stat-icon.today {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--accent-primary);
+}
 
 .stat-card .stat-value {
     font-size: 1.8rem;
@@ -607,10 +675,21 @@ body {
     transform: translate(30%, -30%);
 }
 
-.stat-card:nth-child(1)::after { background: var(--success); }
-.stat-card:nth-child(2)::after { background: var(--danger); }
-.stat-card:nth-child(3)::after { background: var(--info); }
-.stat-card:nth-child(4)::after { background: var(--warning); }
+.stat-card:nth-child(1)::after {
+    background: var(--success);
+}
+
+.stat-card:nth-child(2)::after {
+    background: var(--danger);
+}
+
+.stat-card:nth-child(3)::after {
+    background: var(--info);
+}
+
+.stat-card:nth-child(4)::after {
+    background: var(--warning);
+}
 
 /* Chart Grid */
 .chart-grid {
@@ -806,8 +885,15 @@ tbody tr:last-child td {
 }
 
 @keyframes slideInRight {
-    from { opacity: 0; transform: translateX(50px); }
-    to { opacity: 1; transform: translateX(0); }
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 
 /* ======= SALE CART ======= */
@@ -957,7 +1043,9 @@ tbody tr:last-child td {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ======= STATUS BADGES ======= */
@@ -976,8 +1064,27 @@ tbody tr:last-child td {
 }
 
 .status-badge.low-stock {
-    background: var(--warning-bg);
-    color: var(--warning);
+    background: rgba(255, 152, 0, 0.15);
+    color: #ff9800;
+}
+
+/* Product Thumbnails */
+.product-img-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bg-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+}
+
+.product-img-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .status-badge.out-of-stock {
@@ -990,6 +1097,7 @@ tbody tr:last-child td {
     .chart-grid {
         grid-template-columns: 1fr;
     }
+
     .sale-layout {
         grid-template-columns: 1fr;
     }
@@ -999,25 +1107,32 @@ tbody tr:last-child td {
     .sidebar {
         transform: translateX(-100%);
     }
+
     .sidebar.open {
         transform: translateX(0);
     }
+
     .main-content {
         margin-left: 0;
     }
+
     .sidebar-toggle {
         display: flex;
     }
+
     .stat-grid {
         grid-template-columns: 1fr 1fr;
     }
+
     .form-row {
         grid-template-columns: 1fr;
     }
+
     .table-toolbar {
         flex-direction: column;
         align-items: stretch;
     }
+
     .search-box {
         max-width: 100%;
     }
@@ -1027,6 +1142,7 @@ tbody tr:last-child td {
     .stat-grid {
         grid-template-columns: 1fr;
     }
+
     .content-area {
         padding: 16px;
     }
