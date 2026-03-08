@@ -1092,6 +1092,37 @@ tbody tr:last-child td {
     color: var(--danger);
 }
 
+/* ======= TABS ======= */
+.tabs-header {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.tab-btn:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+}
+
+.tab-btn.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: #fff;
+}
+
 /* ======= RESPONSIVE ======= */
 @media (max-width: 1024px) {
     .chart-grid {

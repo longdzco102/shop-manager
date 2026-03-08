@@ -22,6 +22,7 @@ app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/procurements', require('./routes/procurements'));
+app.use('/api/attendance', require('./routes/attendance'));
 
 // SPA fallback - serve index.html for all non-API routes
 app.get('*', (req, res) => {
@@ -107,6 +108,31 @@ async function initDB() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (created_by) REFERENCES users(id)
         )`);
+
+        await db.query(`CREATE TABLE IF NOT EXISTS attendance (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            work_date DATE NOT NULL,
+            hours_worked DECIMAL(4, 1) NOT NULL DEFAULT 8,
+            overtime_hours DECIMAL(4, 1) NOT NULL DEFAULT 0,
+            note VARCHAR(200) DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE KEY unique_user_date (user_id, work_date)
+        )`);
+
+        // Migration: Add salary fields to users
+        try {
+            const [cols] = await db.query('SHOW COLUMNS FROM users LIKE ?', ['base_salary']);
+            if (cols.length === 0) {
+                await db.query('ALTER TABLE users ADD COLUMN base_salary DECIMAL(12,2) DEFAULT 0');
+                await db.query('ALTER TABLE users ADD COLUMN hourly_rate DECIMAL(12,2) DEFAULT 25000');
+                await db.query('ALTER TABLE users ADD COLUMN overtime_rate DECIMAL(12,2) DEFAULT 37500');
+                console.log('✅ Migration: Added salary fields to users');
+            }
+        } catch (err) {
+            console.error('Salary migration:', err.message);
+        }
 
         // Seed admin user if not exists
         const bcrypt = require('bcryptjs');

@@ -152,7 +152,9 @@ const App = {
             dashboard: 'Dashboard',
             products: 'Quản lý Sản phẩm',
             sales: 'Bán hàng',
+            procurements: 'Nhập hàng',
             expenses: 'Quản lý Chi phí',
+            attendance: 'Chấm công & Lương',
             reports: 'Báo cáo',
             users: 'Quản lý Nhân viên'
         };
@@ -170,7 +172,9 @@ const App = {
             case 'dashboard': DashboardPage.render(); break;
             case 'products': ProductsPage.render(); break;
             case 'sales': SalesPage.render(); break;
+            case 'procurements': ProcurementsPage.render(); break;
             case 'expenses': ExpensesPage.render(); break;
+            case 'attendance': AttendancePage.render(); break;
             case 'reports': ReportsPage.render(); break;
             case 'users': UsersPage.render(); break;
         }
