@@ -227,13 +227,20 @@ const SalesPage = {
                 <div class="table-container">
                     <table>
                         <thead><tr>
-                            <th>ID</th><th>Nhân viên</th><th>Tổng</th><th>Thời gian</th><th></th>
+                            <th>ID</th><th>Nhân viên / Khách</th><th>Trạng thái</th><th>Tổng</th><th>Thời gian</th><th></th>
                         </tr></thead>
                         <tbody>
                             ${sales.map(s => `
                                 <tr>
                                     <td>#${s.id}</td>
-                                    <td>${s.full_name || s.username}</td>
+                                    <td>
+                                        ${s.customer_name ? `<strong>${s.customer_name}</strong> <span style="color:var(--text-muted);font-size:0.8rem">(${s.customer_phone})</span>` : (s.full_name || s.username)}
+                                    </td>
+                                    <td>
+                                        <span class="status-badge" style="background:${s.status === 'completed' ? 'rgba(16,185,129,0.1)' : s.status === 'pending' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)'}; color:${s.status === 'completed' ? '#10B981' : s.status === 'pending' ? '#F59E0B' : '#EF4444'}">
+                                            ${s.status === 'completed' ? 'Hoàn thành' : s.status === 'pending' ? 'Chờ xử lý' : 'Đã hủy'}
+                                        </span>
+                                    </td>
                                     <td style="color:var(--success);font-weight:600">${App.formatCurrency(s.total)}</td>
                                     <td>${App.formatDateTime(s.created_at)}</td>
                                     <td><button class="btn btn-sm btn-secondary" onclick="SalesPage.viewSaleDetail(${s.id})">Chi tiết</button></td>
@@ -249,10 +256,29 @@ const SalesPage = {
     async viewSaleDetail(id) {
         try {
             const sale = await App.api(`/sales/${id}`);
+            let actionHtml = '';
+
+            if (sale.status === 'pending') {
+                actionHtml = `
+                    <div style="margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end;">
+                        <button class="btn btn-sm btn-danger" onclick="SalesPage.updateSaleStatus(${id}, 'cancelled')">Hủy đơn</button>
+                        <button class="btn btn-sm btn-primary" onclick="SalesPage.updateSaleStatus(${id}, 'completed')">Đã nhận tiền (Hoàn thành)</button>
+                    </div>
+                `;
+            }
+
             App.showModal(`Đơn hàng #${id}`, `
-                <div style="margin-bottom:16px">
-                    <strong>Nhân viên:</strong> ${sale.full_name || sale.username}<br>
-                    <strong>Thời gian:</strong> ${App.formatDateTime(sale.created_at)}
+                <div style="margin-bottom:16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <strong>Loại đơn:</strong> ${sale.customer_name ? 'Khách Online' : 'Bán tại quầy'}<br>
+                        <strong>Nhân viên:</strong> ${sale.customer_name ? '-' : (sale.full_name || sale.username)}<br>
+                        <strong>Thời gian:</strong> ${App.formatDateTime(sale.created_at)}
+                    </div>
+                    ${sale.customer_name ? `
+                    <div style="background:var(--bg-dark); padding: 10px; border-radius: 8px;">
+                        <strong>Khách hàng:</strong> ${sale.customer_name}<br>
+                        <strong>Số ĐT:</strong> ${sale.customer_phone}
+                    </div>` : ''}
                 </div>
                 <div class="table-container">
                     <table>
@@ -273,7 +299,22 @@ const SalesPage = {
                     <span>Tổng cộng:</span>
                     <span class="total-value">${App.formatCurrency(sale.total)}</span>
                 </div>
+                ${actionHtml}
             `);
+        } catch (err) {
+            App.toast(err.message, 'error');
+        }
+    },
+
+    async updateSaleStatus(id, status) {
+        try {
+            await App.api(`/sales/${id}/status`, {
+                method: 'PUT',
+                body: JSON.stringify({ status })
+            });
+            App.toast('Cập nhật trạng thái thành công!', 'success');
+            App.closeModal();
+            this.loadSalesHistory();
         } catch (err) {
             App.toast(err.message, 'error');
         }

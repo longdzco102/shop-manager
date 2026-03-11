@@ -7,7 +7,8 @@ router.use(authenticate);
 
 router.get('/', attendanceController.getAll);
 router.get('/payroll', attendanceController.getPayroll);
-router.post('/', requireAdmin, attendanceController.create);
+router.post('/', attendanceController.create);
+router.put('/:id', requireAdmin, attendanceController.update);
 router.delete('/:id', requireAdmin, attendanceController.remove);
 
 module.exports = router;

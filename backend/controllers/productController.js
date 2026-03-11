@@ -1,102 +1,40 @@
-const db = require('../config/db');
+const Product = require('../models/Product');
+const { asyncHandler, AppError } = require('../utils/errorHandler');
 
-// Get all products (with optional search)
-async function getAll(req, res) {
-    try {
-        const { search, category } = req.query;
-        let sql = 'SELECT * FROM products';
-        const params = [];
+const getAll = asyncHandler(async (req, res) => {
+    const products = await Product.findAll({
+        search: req.query.search,
+        category: req.query.category
+    });
+    res.json(products);
+});
 
-        const conditions = [];
-        if (search) {
-            conditions.push('name LIKE ?');
-            params.push(`%${search}%`);
-        }
-        if (category) {
-            conditions.push('category = ?');
-            params.push(category);
-        }
-        if (conditions.length > 0) {
-            sql += ' WHERE ' + conditions.join(' AND ');
-        }
-        sql += ' ORDER BY created_at DESC';
+const getOne = asyncHandler(async (req, res) => {
+    const product = await Product.findById(req.params.id);
+    if (!product) throw new AppError('Product not found.', 404);
+    res.json(product);
+});
 
-        const [rows] = await db.query(sql, params);
-        res.json(rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
+const create = asyncHandler(async (req, res) => {
+    const result = await Product.create(req.body);
+    res.status(201).json(result);
+});
 
-// Get single product
-async function getOne(req, res) {
-    try {
-        const [rows] = await db.query('SELECT * FROM products WHERE id = ?', [req.params.id]);
-        if (rows.length === 0) return res.status(404).json({ error: 'Product not found.' });
-        res.json(rows[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
+const update = asyncHandler(async (req, res) => {
+    const updated = await Product.update(req.params.id, req.body);
+    if (!updated) throw new AppError('Product not found.', 404);
+    res.json({ id: parseInt(req.params.id), ...req.body });
+});
 
-// Create product
-async function create(req, res) {
-    try {
-        const { name, price, stock, category, image_url } = req.body;
-        if (!name || price === undefined) {
-            return res.status(400).json({ error: 'Name and price are required.' });
-        }
-        const [result] = await db.query(
-            'INSERT INTO products (name, price, stock, category, image_url) VALUES (?, ?, ?, ?, ?)',
-            [name, price, stock || 0, category || '', image_url || '']
-        );
-        res.status(201).json({
-            id: result.insertId,
-            name,
-            price,
-            stock: stock || 0,
-            category: category || '',
-            image_url: image_url || ''
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
+const remove = asyncHandler(async (req, res) => {
+    const deleted = await Product.delete(req.params.id);
+    if (!deleted) throw new AppError('Product not found.', 404);
+    res.json({ message: 'Product deleted.' });
+});
 
-// Update product
-async function update(req, res) {
-    try {
-        const { name, price, stock, category, image_url } = req.body;
-        const [result] = await db.query(
-            'UPDATE products SET name = ?, price = ?, stock = ?, category = ?, image_url = ? WHERE id = ?',
-            [name, price, stock, category, image_url, req.params.id]
-        );
-        if (result.affectedRows === 0) return res.status(404).json({ error: 'Product not found.' });
-        res.json({ id: parseInt(req.params.id), name, price, stock, category, image_url });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
-
-// Delete product
-async function remove(req, res) {
-    try {
-        const [result] = await db.query('DELETE FROM products WHERE id = ?', [req.params.id]);
-        if (result.affectedRows === 0) return res.status(404).json({ error: 'Product not found.' });
-        res.json({ message: 'Product deleted.' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
-
-// Get categories
-async function getCategories(req, res) {
-    try {
-        const [rows] = await db.query('SELECT DISTINCT category FROM products WHERE category != "" ORDER BY category');
-        res.json(rows.map(r => r.category));
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
+const getCategories = asyncHandler(async (req, res) => {
+    const categories = await Product.getCategories();
+    res.json(categories);
+});
 
 module.exports = { getAll, getOne, create, update, remove, getCategories };

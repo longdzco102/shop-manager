@@ -1,73 +1,46 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const db = require('../config/db');
+const User = require('../models/User');
+const { asyncHandler, AppError } = require('../utils/errorHandler');
 
-// Login
-async function login(req, res) {
-    try {
-        const { username, password } = req.body;
-        if (!username || !password) {
-            return res.status(400).json({ error: 'Username and password are required.' });
-        }
+const login = asyncHandler(async (req, res) => {
+    const { username, password } = req.body;
+    if (!username || !password) throw new AppError('Username and password are required.', 400);
 
-        const [users] = await db.query('SELECT * FROM users WHERE username = ?', [username]);
-        if (users.length === 0) {
-            return res.status(401).json({ error: 'Invalid username or password.' });
-        }
+    const user = await User.findByUsername(username);
+    if (!user) throw new AppError('Invalid username or password.', 401);
 
-        const user = users[0];
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ error: 'Invalid username or password.' });
-        }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) throw new AppError('Invalid username or password.', 401);
 
-        const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role, full_name: user.full_name },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
+    const token = jwt.sign(
+        { id: user.id, username: user.username, role: user.role, full_name: user.full_name },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+    );
 
-        res.json({
-            token,
-            user: { id: user.id, username: user.username, role: user.role, full_name: user.full_name }
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
+    res.json({
+        token,
+        user: { id: user.id, username: user.username, role: user.role, full_name: user.full_name }
+    });
+});
 
-// Register (admin only)
-async function register(req, res) {
-    try {
-        const { username, password, full_name, role } = req.body;
-        if (!username || !password) {
-            return res.status(400).json({ error: 'Username and password are required.' });
-        }
+const register = asyncHandler(async (req, res) => {
+    const { username, password, full_name, role } = req.body;
+    const hash = await bcrypt.hash(password, 10);
+    const result = await User.create({
+        username, password: hash, full_name, role,
+        base_salary: req.body.base_salary,
+        hourly_rate: req.body.hourly_rate,
+        overtime_rate: req.body.overtime_rate
+    });
+    res.status(201).json(result);
+});
 
-        const hash = await bcrypt.hash(password, 10);
-        const [result] = await db.query(
-            'INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)',
-            [username, hash, full_name || '', role || 'staff']
-        );
-
-        res.status(201).json({ id: result.insertId, username, full_name, role: role || 'staff' });
-    } catch (err) {
-        if (err.code === 'ER_DUP_ENTRY') {
-            return res.status(400).json({ error: 'Username already exists.' });
-        }
-        res.status(500).json({ error: err.message });
-    }
-}
-
-// Get current user profile
-async function getProfile(req, res) {
-    try {
-        const [users] = await db.query('SELECT id, username, full_name, role, created_at FROM users WHERE id = ?', [req.user.id]);
-        if (users.length === 0) return res.status(404).json({ error: 'User not found.' });
-        res.json(users[0]);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
+const getProfile = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user.id);
+    if (!user) throw new AppError('User not found.', 404);
+    res.json(user);
+});
 
 module.exports = { login, register, getProfile };

@@ -1,63 +1,25 @@
-const db = require('../config/db');
+const Expense = require('../models/Expense');
+const { asyncHandler, AppError } = require('../utils/errorHandler');
 
-// Get all expenses
-async function getAll(req, res) {
-    try {
-        const { category } = req.query;
-        let sql = `SELECT e.*, u.username, u.full_name 
-                    FROM expenses e 
-                    JOIN users u ON e.created_by = u.id`;
-        const params = [];
+const getAll = asyncHandler(async (req, res) => {
+    const expenses = await Expense.findAll(req.query.category);
+    res.json(expenses);
+});
 
-        if (category) {
-            sql += ' WHERE e.category = ?';
-            params.push(category);
-        }
-        sql += ' ORDER BY e.date DESC, e.created_at DESC';
+const create = asyncHandler(async (req, res) => {
+    const result = await Expense.create({ ...req.body, created_by: req.user.id });
+    res.status(201).json(result);
+});
 
-        const [rows] = await db.query(sql, params);
-        res.json(rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
+const remove = asyncHandler(async (req, res) => {
+    const deleted = await Expense.delete(req.params.id);
+    if (!deleted) throw new AppError('Expense not found.', 404);
+    res.json({ message: 'Expense deleted.' });
+});
 
-// Create expense
-async function create(req, res) {
-    try {
-        const { title, amount, category, date } = req.body;
-        if (!title || amount === undefined || !date) {
-            return res.status(400).json({ error: 'Title, amount, and date are required.' });
-        }
-        const [result] = await db.query(
-            'INSERT INTO expenses (title, amount, category, date, created_by) VALUES (?, ?, ?, ?, ?)',
-            [title, amount, category || '', date, req.user.id]
-        );
-        res.status(201).json({ id: result.insertId, title, amount, category, date });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
-
-// Delete expense (admin only)
-async function remove(req, res) {
-    try {
-        const [result] = await db.query('DELETE FROM expenses WHERE id = ?', [req.params.id]);
-        if (result.affectedRows === 0) return res.status(404).json({ error: 'Expense not found.' });
-        res.json({ message: 'Expense deleted.' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
-
-// Get expense categories
-async function getCategories(req, res) {
-    try {
-        const [rows] = await db.query('SELECT DISTINCT category FROM expenses WHERE category != "" ORDER BY category');
-        res.json(rows.map(r => r.category));
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
+const getCategories = asyncHandler(async (req, res) => {
+    const categories = await Expense.getCategories();
+    res.json(categories);
+});
 
 module.exports = { getAll, create, remove, getCategories };

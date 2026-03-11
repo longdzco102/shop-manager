@@ -156,7 +156,8 @@ const App = {
             expenses: 'Quản lý Chi phí',
             attendance: 'Chấm công & Lương',
             reports: 'Báo cáo',
-            users: 'Quản lý Nhân viên'
+            users: 'Quản lý Nhân viên',
+            discounts: 'Mã Giảm Giá'
         };
         document.getElementById('page-title').textContent = titles[page] || page;
 
@@ -177,6 +178,7 @@ const App = {
             case 'attendance': AttendancePage.render(); break;
             case 'reports': ReportsPage.render(); break;
             case 'users': UsersPage.render(); break;
+            case 'discounts': DiscountsPage.render(); break;
         }
     },
 
@@ -207,6 +209,7 @@ const App = {
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
+                if (item.getAttribute('target') === '_blank') return; // Allow external links
                 e.preventDefault();
                 this.navigate(item.dataset.page);
             });
@@ -230,6 +233,73 @@ const App = {
         if (this.token && this.user) {
             this.showApp();
         }
+
+        // Initialize Chatbot
+        this.initChatbot();
+    },
+
+    // AI Chatbot logic
+    initChatbot() {
+        const toggleBtn = document.getElementById('ai-chat-toggle');
+        const chatWindow = document.getElementById('ai-chat-window');
+        const closeBtn = document.getElementById('ai-chat-close');
+        const input = document.getElementById('ai-input');
+        const sendBtn = document.getElementById('ai-send');
+        const body = document.getElementById('ai-chat-body');
+
+        if (!toggleBtn || !chatWindow) return;
+
+        const toggleChat = () => chatWindow.classList.toggle('show');
+        toggleBtn.addEventListener('click', toggleChat);
+        closeBtn.addEventListener('click', toggleChat);
+
+        const appendMessage = (text, sender, isLoading = false) => {
+            const msg = document.createElement('div');
+            msg.className = `ai-msg ${sender} ${isLoading ? 'loading' : ''}`;
+
+            if (isLoading) {
+                msg.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;border-color:var(--text-muted) transparent transparent transparent"></div>';
+                msg.id = 'ai-loading';
+            } else {
+                // simple markdown styling for bold responses
+                const formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\n/g, '<br>');
+                msg.innerHTML = formattedText;
+                const loadingEl = document.getElementById('ai-loading');
+                if (loadingEl) loadingEl.remove();
+            }
+
+            body.appendChild(msg);
+            body.scrollTop = body.scrollHeight;
+        };
+
+        const sendMessage = async () => {
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Optimistic UI update
+            input.value = '';
+            appendMessage(text, 'user');
+            appendMessage('', 'bot', true); // Loading state
+
+            try {
+                const data = await this.api('/ai/chat', {
+                    method: 'POST',
+                    body: JSON.stringify({ message: text })
+                });
+                if (data.setupRequired) {
+                    App.toast('Admin cần cấu hình GEMINI_API_KEY', 'error');
+                }
+                appendMessage(data.reply || data.error, 'bot');
+            } catch (err) {
+                appendMessage('Xin lỗi, tôi đang bận hoặc có lỗi kết nối. Hãy thử lại.', 'bot');
+            }
+        };
+
+        sendBtn.addEventListener('click', sendMessage);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
     }
 };
 

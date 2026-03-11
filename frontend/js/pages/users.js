@@ -45,7 +45,10 @@ const UsersPage = {
                     <td><span class="badge" style="${u.role === 'admin' ? 'background:rgba(239,68,68,0.1);color:var(--danger);border-color:rgba(239,68,68,0.2)' : ''}">${u.role}</span></td>
                     <td>${App.formatDate(u.created_at)}</td>
                     <td>
-                        ${u.id !== App.user.id ? `<button class="btn btn-sm btn-danger" onclick="UsersPage.deleteUser(${u.id})">Xóa</button>` : '<span style="color:var(--text-muted)">Bạn</span>'}
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-secondary" onclick="UsersPage.showUserForm(${u.id})">Sửa</button>
+                            ${u.id !== App.user.id ? `<button class="btn btn-sm btn-danger" onclick="UsersPage.deleteUser(${u.id})">Xóa</button>` : '<span style="color:var(--text-muted)">Bạn</span>'}
+                        </div>
                     </td>
                 </tr>
             `).join('');
@@ -54,9 +57,13 @@ const UsersPage = {
         }
     },
 
-    showUserForm() {
-        App.showModal('Thêm nhân viên', `
+    showUserForm(userId = null) {
+        const user = userId ? this.users.find(u => u.id === userId) : null;
+        const title = user ? 'Sửa nhân viên' : 'Thêm nhân viên';
+
+        App.showModal(title, `
             <form id="user-form" onsubmit="return false;">
+                ${!user ? `
                 <div class="form-group">
                     <label>Username *</label>
                     <input type="text" id="uf-username" placeholder="Tên đăng nhập" required>
@@ -65,20 +72,43 @@ const UsersPage = {
                     <label>Mật khẩu *</label>
                     <input type="password" id="uf-password" placeholder="Nhập mật khẩu" required>
                 </div>
+                ` : `<div class="form-group" style="color:var(--text-muted)">Đang sửa: <strong>${user.username}</strong></div>`}
+                
                 <div class="form-group">
                     <label>Họ tên</label>
-                    <input type="text" id="uf-fullname" placeholder="Họ và tên">
+                    <input type="text" id="uf-fullname" placeholder="Họ và tên" value="${user ? (user.full_name || '') : ''}">
                 </div>
+                
                 <div class="form-group">
                     <label>Vai trò</label>
                     <select id="uf-role">
-                        <option value="staff">Staff (Nhân viên)</option>
-                        <option value="admin">Admin</option>
+                        <option value="staff" ${user && user.role === 'staff' ? 'selected' : ''}>Staff (Nhân viên)</option>
+                        <option value="admin" ${user && user.role === 'admin' ? 'selected' : ''}>Admin</option>
                     </select>
                 </div>
+
+                <hr style="border:0;border-top:1px solid var(--border);margin:16px 0">
+                <div style="font-weight:600;margin-bottom:12px">Mức lương (VND)</div>
+                
+                <div class="form-group">
+                    <label>Lương cơ bản / Tháng</label>
+                    <input type="number" id="uf-base-salary" value="${user ? (user.base_salary || 0) : 0}">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Lương theo giờ</label>
+                        <input type="number" id="uf-hourly" value="${user ? (user.hourly_rate || 25000) : 25000}">
+                    </div>
+                    <div class="form-group">
+                        <label>Lương tăng ca (1h)</label>
+                        <input type="number" id="uf-overtime" value="${user ? (user.overtime_rate || 37500) : 37500}">
+                    </div>
+                </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="App.closeModal()">Hủy</button>
-                    <button type="submit" class="btn btn-primary">Tạo</button>
+                    <button type="submit" class="btn btn-primary">${user ? 'Cập nhật' : 'Tạo mới'}</button>
                 </div>
             </form>
         `);
@@ -86,14 +116,24 @@ const UsersPage = {
         document.getElementById('user-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const data = {
-                username: document.getElementById('uf-username').value,
-                password: document.getElementById('uf-password').value,
                 full_name: document.getElementById('uf-fullname').value,
-                role: document.getElementById('uf-role').value
+                role: document.getElementById('uf-role').value,
+                base_salary: parseFloat(document.getElementById('uf-base-salary').value) || 0,
+                hourly_rate: parseFloat(document.getElementById('uf-hourly').value) || 0,
+                overtime_rate: parseFloat(document.getElementById('uf-overtime').value) || 0
             };
+
             try {
-                await App.api('/auth/register', { method: 'POST', body: JSON.stringify(data) });
-                App.toast('Tạo nhân viên thành công!', 'success');
+                if (user) {
+                    await App.api(`/users/${user.id}`, { method: 'PUT', body: JSON.stringify(data) });
+                    App.toast('Cập nhật thành công!', 'success');
+                } else {
+                    data.username = document.getElementById('uf-username').value;
+                    data.password = document.getElementById('uf-password').value;
+                    await App.api('/auth/register', { method: 'POST', body: JSON.stringify(data) });
+                    App.toast('Tạo nhân viên thành công!', 'success');
+                }
+
                 App.closeModal();
                 await this.loadUsers();
             } catch (err) {

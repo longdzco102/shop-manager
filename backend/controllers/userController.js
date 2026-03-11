@@ -1,28 +1,30 @@
-const db = require('../config/db');
+const User = require('../models/User');
+const { asyncHandler, AppError } = require('../utils/errorHandler');
 
-// Get all users (admin only)
-async function getAll(req, res) {
-    try {
-        const [rows] = await db.query('SELECT id, username, full_name, role, created_at FROM users ORDER BY created_at DESC');
-        res.json(rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+const getAll = asyncHandler(async (req, res) => {
+    const users = await User.findAll();
+    res.json(users);
+});
+
+const remove = asyncHandler(async (req, res) => {
+    const userId = parseInt(req.params.id);
+    if (userId === req.user.id) throw new AppError('Cannot delete your own account.', 400);
+    const deleted = await User.delete(userId);
+    if (!deleted) throw new AppError('User not found.', 404);
+    res.json({ message: 'User deleted.' });
+});
+
+const update = asyncHandler(async (req, res) => {
+    const userId = parseInt(req.params.id);
+    const { full_name, role, base_salary, hourly_rate, overtime_rate } = req.body;
+
+    if (userId === req.user.id && role !== 'admin') {
+        throw new AppError('Cannot demote yourself.', 400);
     }
-}
 
-// Delete user (admin only, cannot delete self)
-async function remove(req, res) {
-    try {
-        const userId = parseInt(req.params.id);
-        if (userId === req.user.id) {
-            return res.status(400).json({ error: 'Cannot delete your own account.' });
-        }
-        const [result] = await db.query('DELETE FROM users WHERE id = ?', [userId]);
-        if (result.affectedRows === 0) return res.status(404).json({ error: 'User not found.' });
-        res.json({ message: 'User deleted.' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-}
+    const updated = await User.update(userId, { full_name, role, base_salary, hourly_rate, overtime_rate });
+    if (!updated) throw new AppError('User not found.', 404);
+    res.json({ message: 'User updated.' });
+});
 
-module.exports = { getAll, remove };
+module.exports = { getAll, remove, update };

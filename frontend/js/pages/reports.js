@@ -53,6 +53,10 @@ const ReportsPage = {
             <div class="card">
                 <div class="card-header">
                     <div class="card-title">Doanh thu theo tháng</div>
+                    <button class="btn btn-sm btn-primary" onclick="ReportsPage.exportToExcel()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        Xuất Excel
+                    </button>
                 </div>
                 <div class="table-container" id="monthly-revenue-table"></div>
             </div>
@@ -62,12 +66,14 @@ const ReportsPage = {
     },
 
     async loadData() {
+        this.rawData = {};
         // Destroy old charts
         Object.values(this.charts).forEach(c => c.destroy && c.destroy());
 
         try {
             // Summary
             const summary = await App.api('/dashboard/summary');
+            this.rawData.summary = summary;
             document.getElementById('report-total-revenue').textContent = App.formatCurrency(summary.total_revenue);
             document.getElementById('report-total-expenses').textContent = App.formatCurrency(summary.total_expenses);
             document.getElementById('report-profit').textContent = App.formatCurrency(summary.profit);
@@ -131,6 +137,7 @@ const ReportsPage = {
 
             // Expense category chart
             const expenseData = await App.api('/dashboard/expense-chart');
+            this.rawData.expenseData = expenseData;
             const ctx2 = document.getElementById('report-expense-chart');
             if (ctx2 && expenseData.length > 0) {
                 const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#22c55e', '#3b82f6', '#ef4444', '#14b8a6'];
@@ -157,6 +164,7 @@ const ReportsPage = {
 
             // Monthly revenue table
             const monthlyData = await App.api('/dashboard/monthly-revenue');
+            this.rawData.monthlyData = monthlyData;
             const tableEl = document.getElementById('monthly-revenue-table');
             if (tableEl) {
                 if (monthlyData.length === 0) {
@@ -180,6 +188,58 @@ const ReportsPage = {
             }
         } catch (err) {
             App.toast(err.message, 'error');
+        }
+    },
+
+    exportToExcel() {
+        if (!window.XLSX) {
+            App.toast('Không tải được thư viện xuất Excel. Thử tải lại trang!', 'error');
+            return;
+        }
+
+        try {
+            const wb = window.XLSX.utils.book_new();
+
+            // 1. Tóm tắt
+            const summaryData = [
+                ['BÁO CÁO TỔNG QUAN', ''],
+                ['Ngày xuất:', new Date().toLocaleString('vi-VN')],
+                [''],
+                ['Chỉ số', 'Giá trị (VNĐ)'],
+                ['Tổng Doanh Thu', this.rawData.summary.total_revenue || 0],
+                ['Tổng Chi Phí', this.rawData.summary.total_expenses || 0],
+                ['Lợi Nhuận', this.rawData.summary.profit || 0],
+            ];
+            const wsSummary = window.XLSX.utils.aoa_to_sheet(summaryData);
+            window.XLSX.utils.book_append_sheet(wb, wsSummary, 'Tổng Quan');
+
+            // 2. Doanh thu theo tháng
+            if (this.rawData.monthlyData && this.rawData.monthlyData.length > 0) {
+                const monthlyFormatted = this.rawData.monthlyData.map(m => ({
+                    'Tháng': m.month,
+                    'Doanh thu (VNĐ)': Number(m.revenue),
+                    'Số đơn hàng': Number(m.sale_count)
+                }));
+                const wsMonthly = window.XLSX.utils.json_to_sheet(monthlyFormatted);
+                window.XLSX.utils.book_append_sheet(wb, wsMonthly, 'Doanh Thu Tháng');
+            }
+
+            // 3. Chi phí theo danh mục
+            if (this.rawData.expenseData && this.rawData.expenseData.length > 0) {
+                const expenseFormatted = this.rawData.expenseData.map(e => ({
+                    'Danh mục': e.category || 'Khác',
+                    'Tổng chi phí (VNĐ)': Number(e.total)
+                }));
+                const wsExpense = window.XLSX.utils.json_to_sheet(expenseFormatted);
+                window.XLSX.utils.book_append_sheet(wb, wsExpense, 'Chi Phí Mục');
+            }
+
+            // Export
+            window.XLSX.writeFile(wb, `Bao_Cao_Thong_Ke_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            App.toast('Xuất Excel thành công!', 'success');
+        } catch (err) {
+            console.error('Export error:', err);
+            App.toast('Có lỗi khi xuất thư viện Excel.', 'error');
         }
     }
 };

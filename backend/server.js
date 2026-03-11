@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+const { globalErrorHandler } = require('./utils/errorHandler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -14,8 +15,14 @@ app.use(express.urlencoded({ extended: true }));
 // Serve frontend static files
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-// API Routes
+// API Routes - Public
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/customer-auth', require('./routes/customerAuth'));
+app.use('/api/shop', require('./routes/shop'));
+app.use('/api/cart', require('./routes/cart'));
+app.use('/api/discounts', require('./routes/discounts'));
+
+// API Routes - Authenticated
 app.use('/api/products', require('./routes/products'));
 app.use('/api/sales', require('./routes/sales'));
 app.use('/api/expenses', require('./routes/expenses'));
@@ -23,11 +30,20 @@ app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/procurements', require('./routes/procurements'));
 app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/ai', require('./routes/ai'));
 
-// SPA fallback - serve index.html for all non-API routes
+// Admin SPA fallback
+app.get('/admin/*', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'frontend', 'admin', 'index.html'));
+});
+
+// Shop front fallback
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
+
+// Global error handler (MUST be last middleware)
+app.use(globalErrorHandler);
 
 // Initialize database and start server
 const db = require('./config/db');
@@ -58,16 +74,13 @@ async function initDB() {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )`);
 
-        // Migration: Add image_url to products if not exist (for existing DBs)
         try {
             const [cols] = await db.query('SHOW COLUMNS FROM products LIKE ?', ['image_url']);
             if (cols.length === 0) {
                 await db.query('ALTER TABLE products ADD COLUMN image_url TEXT');
                 console.log('✅ Migration: Added image_url to products');
             }
-        } catch (err) {
-            console.error('Migration failed:', err.message);
-        }
+        } catch (err) { console.error('Migration:', err.message); }
 
         await db.query(`CREATE TABLE IF NOT EXISTS procurements (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -121,6 +134,60 @@ async function initDB() {
             UNIQUE KEY unique_user_date (user_id, work_date)
         )`);
 
+        // === NEW TABLES ===
+
+        await db.query(`CREATE TABLE IF NOT EXISTS discounts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            code VARCHAR(50) UNIQUE NOT NULL,
+            name VARCHAR(200) NOT NULL,
+            type ENUM('percentage', 'fixed_amount') NOT NULL,
+            value DECIMAL(10,2) NOT NULL,
+            min_purchase DECIMAL(10,2) DEFAULT 0,
+            max_discount DECIMAL(10,2),
+            start_date DATETIME NOT NULL,
+            end_date DATETIME NOT NULL,
+            usage_limit INT,
+            used_count INT DEFAULT 0,
+            status ENUM('active', 'inactive', 'expired') DEFAULT 'active',
+            created_by INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES users(id)
+        )`);
+
+        await db.query(`CREATE TABLE IF NOT EXISTS product_discounts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            product_id INT NOT NULL,
+            discount_percentage DECIMAL(5,2) NOT NULL,
+            start_date DATETIME NOT NULL,
+            end_date DATETIME NOT NULL,
+            created_by INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+            FOREIGN KEY (created_by) REFERENCES users(id)
+        )`);
+
+        await db.query(`CREATE TABLE IF NOT EXISTS cart_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            session_id VARCHAR(255),
+            user_id INT,
+            product_id INT NOT NULL,
+            quantity INT NOT NULL DEFAULT 1,
+            added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+        )`);
+
+        await db.query(`CREATE TABLE IF NOT EXISTS discount_usage (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            discount_id INT NOT NULL,
+            sale_id INT NOT NULL,
+            discount_amount DECIMAL(10,2) NOT NULL,
+            used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (discount_id) REFERENCES discounts(id),
+            FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
+        )`);
+
+        // === MIGRATIONS ===
+
         // Migration: Add salary fields to users
         try {
             const [cols] = await db.query('SHOW COLUMNS FROM users LIKE ?', ['base_salary']);
@@ -130,9 +197,37 @@ async function initDB() {
                 await db.query('ALTER TABLE users ADD COLUMN overtime_rate DECIMAL(12,2) DEFAULT 37500');
                 console.log('✅ Migration: Added salary fields to users');
             }
-        } catch (err) {
-            console.error('Salary migration:', err.message);
-        }
+        } catch (err) { console.error('Salary migration:', err.message); }
+
+        // Migration: Add customer order fields to sales
+        try {
+            const [cols] = await db.query('SHOW COLUMNS FROM sales LIKE ?', ['status']);
+            if (cols.length === 0) {
+                await db.query('ALTER TABLE sales ADD COLUMN status ENUM("pending", "completed", "cancelled") DEFAULT "completed"');
+                await db.query('ALTER TABLE sales ADD COLUMN customer_name VARCHAR(100) DEFAULT ""');
+                await db.query('ALTER TABLE sales ADD COLUMN customer_phone VARCHAR(20) DEFAULT ""');
+                console.log('✅ Migration: Added customer fields to sales');
+            }
+        } catch (err) { console.error('Sales migration:', err.message); }
+
+        // Migration: Expand user roles (add 'customer')
+        try {
+            await db.query("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'staff', 'customer') NOT NULL DEFAULT 'staff'");
+            console.log('✅ Migration: Expanded user roles');
+        } catch (err) { /* already done or not needed */ }
+
+        // Migration: Add discount/shipping fields to sales
+        try {
+            const [cols] = await db.query('SHOW COLUMNS FROM sales LIKE ?', ['discount_code']);
+            if (cols.length === 0) {
+                await db.query('ALTER TABLE sales ADD COLUMN discount_code VARCHAR(50) DEFAULT NULL');
+                await db.query('ALTER TABLE sales ADD COLUMN discount_amount DECIMAL(10,2) DEFAULT 0');
+                await db.query('ALTER TABLE sales ADD COLUMN shipping_name VARCHAR(100) DEFAULT ""');
+                await db.query('ALTER TABLE sales ADD COLUMN shipping_phone VARCHAR(20) DEFAULT ""');
+                await db.query('ALTER TABLE sales ADD COLUMN shipping_address TEXT');
+                console.log('✅ Migration: Added discount/shipping fields to sales');
+            }
+        } catch (err) { console.error('Discount migration:', err.message); }
 
         // Seed admin user if not exists
         const bcrypt = require('bcryptjs');
