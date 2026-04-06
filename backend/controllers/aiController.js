@@ -24,11 +24,14 @@ const chat = asyncHandler(async (req, res) => {
     - Tổng số sản phẩm đang có: ${ctx.total_products}
     - Số sản phẩm sắp hết hàng (tồn kho <= 5): ${ctx.low_stock}
     - Doanh thu hôm nay: ${ctx.today_revenue ? Number(ctx.today_revenue).toLocaleString('vi-VN') : '0'} VNĐ
-    - Tổng vốn đã nhập hàng (Procurements): ${ctx.total_procurement ? Number(ctx.total_procurement).toLocaleString('vi-VN') : '0'} VNĐ
+    - Tổng vốn đã nhập hàng: ${ctx.total_procurement ? Number(ctx.total_procurement).toLocaleString('vi-VN') : '0'} VNĐ
     - Tổng các khoản chi phí phát sinh: ${ctx.total_expenses ? Number(ctx.total_expenses).toLocaleString('vi-VN') : '0'} VNĐ
     
-    Hãy trả lời các câu hỏi của người dùng một cách ngắn gọn, chuyên nghiệp và thân thiện. Đặc biệt sẵn sàng phân tích về nguồn cung, tiền hàng, chi phí và lợi nhuận nếu được hỏi.
-    Nhiệm vụ của bạn là giúp họ thao tác nhanh, hiểu dữ liệu hoặc tư vấn cách quản lý shop tốt hơn. Ngoài ra, bạn cũng có thể mổ xẻ và tư vấn về thị trường, giá cả chung bên ngoài nếu người dùng yêu cầu.
+    Danh sách sản phẩm nổi bật hiện tại (tên, tồn kho, giá):
+    ${ctx.product_list}
+    
+    Hãy trả lời các câu hỏi của người dùng một cách ngắn gọn, chuyên nghiệp và thân thiện. Bạn có quyền tìm kiếm thông tin hàng hóa trong danh sách trên để trả lời.
+    Nhiệm vụ của bạn là giúp họ thao tác nhanh, hiểu dữ liệu hoặc tư vấn cách quản lý shop tốt hơn. Ngoài ra, bạn cũng có thể tư vấn, chitchat về các vấn đề ngoài luồng, thị trường, giá cả chung bên ngoài nếu người dùng yêu cầu, không được quá cứng nhắc.
     `;
 
     const result = await model.generateContent({

@@ -10,6 +10,15 @@ const getAll = asyncHandler(async (req, res) => {
     res.json(records);
 });
 
+// Tất cả nhân viên đều có thể xem lịch ca toàn cửa hàng (chỉ đọc)
+const getStoreSchedule = asyncHandler(async (req, res) => {
+    const records = await Attendance.findAll({
+        month: req.query.month
+        // Không lọc user_id → trả toàn bộ
+    });
+    res.json(records);
+});
+
 const create = asyncHandler(async (req, res) => {
     const { user_id, work_date, hours_worked } = req.body;
     if (!user_id || !work_date || hours_worked === undefined) {
@@ -47,4 +56,4 @@ const remove = asyncHandler(async (req, res) => {
     res.json({ message: 'Deleted attendance record.' });
 });
 
-module.exports = { getAll, create, getPayroll, update, remove };
+module.exports = { getAll, getStoreSchedule, create, getPayroll, update, remove };

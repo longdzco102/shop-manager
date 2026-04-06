@@ -37,7 +37,7 @@ app.get('/admin/*', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'frontend', 'admin', 'index.html'));
 });
 
-// Shop front fallback
+// Unified SPA fallback (all roles)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });

@@ -72,10 +72,14 @@ class Dashboard {
     static async getAIContext() {
         const [[{ total_products }]] = await db.query('SELECT COUNT(*) as total_products FROM products');
         const [[{ low_stock }]] = await db.query('SELECT COUNT(*) as low_stock FROM products WHERE stock <= 5');
-        const [[{ today_revenue }]] = await db.query('SELECT SUM(total) as today_revenue FROM sales WHERE DATE(created_at) = CURDATE()');
-        const [[{ total_procurement }]] = await db.query('SELECT SUM(purchase_price * quantity) as total_procurement FROM procurements');
-        const [[{ total_expenses }]] = await db.query('SELECT SUM(amount) as total_expenses FROM expenses');
-        return { total_products, low_stock, today_revenue, total_procurement, total_expenses };
+        const [[{ today_revenue }]] = await db.query('SELECT COALESCE(SUM(total), 0) as today_revenue FROM sales WHERE DATE(created_at) = CURDATE()');
+        const [[{ total_procurement }]] = await db.query('SELECT COALESCE(SUM(purchase_price * quantity), 0) as total_procurement FROM procurements');
+        const [[{ total_expenses }]] = await db.query('SELECT COALESCE(SUM(amount), 0) as total_expenses FROM expenses');
+        
+        const [products] = await db.query('SELECT name, stock, price FROM products LIMIT 100');
+        const product_list = products.map(p => `- ${p.name} (Kho: ${p.stock}, Giá: ${Number(p.price).toLocaleString('vi-VN')} đ)`).join('\n');
+
+        return { total_products, low_stock, today_revenue, total_procurement, total_expenses, product_list };
     }
 }
 

@@ -47,10 +47,13 @@ const getProductDetail = asyncHandler(async (req, res) => {
 });
 
 const checkout = asyncHandler(async (req, res) => {
-    const { shipping_name, shipping_phone, shipping_address, discount_code } = req.body;
+    const { shipping_name, shipping_phone, shipping_address, discount_code, payment_method } = req.body;
     if (!shipping_name || !shipping_phone || !shipping_address) {
         throw new AppError('Vui lòng điền đầy đủ thông tin giao hàng', 400);
     }
+
+    const validPayments = ['cod', 'momo'];
+    const finalPaymentMethod = validPayments.includes(payment_method) ? payment_method : 'cod';
 
     const userId = req.user.id;
     const cartItems = await Cart.getCart(userId);
@@ -81,10 +84,10 @@ const checkout = asyncHandler(async (req, res) => {
         await connection.beginTransaction();
 
         const [saleResult] = await connection.query(
-            `INSERT INTO sales (user_id, total, status, customer_name, customer_phone, discount_code, discount_amount, shipping_name, shipping_phone, shipping_address)
-             VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO sales (user_id, total, status, customer_name, customer_phone, discount_code, discount_amount, shipping_name, shipping_phone, shipping_address, payment_method)
+             VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
             [userId, finalAmount, shipping_name, shipping_phone, discount_code || null, discountAmount,
-             shipping_name, shipping_phone, shipping_address]
+             shipping_name, shipping_phone, shipping_address, finalPaymentMethod]
         );
         const saleId = saleResult.insertId;
 
@@ -107,7 +110,7 @@ const checkout = asyncHandler(async (req, res) => {
         await connection.query('DELETE FROM cart_items WHERE user_id = ?', [userId]);
         await connection.commit();
 
-        res.status(201).json({ message: 'Đặt hàng thành công!', orderId: saleId, finalAmount });
+        res.status(201).json({ message: 'Đặt hàng thành công!', orderId: saleId, finalAmount, paymentMethod: finalPaymentMethod });
     } catch (err) {
         await connection.rollback();
         throw err;
@@ -118,7 +121,7 @@ const checkout = asyncHandler(async (req, res) => {
 
 const getMyOrders = asyncHandler(async (req, res) => {
     const [orders] = await db.query(`
-        SELECT s.id, s.total, s.status, s.created_at, s.shipping_name, s.discount_code, s.discount_amount,
+        SELECT s.id, s.total, s.status, s.created_at, s.shipping_name, s.discount_code, s.discount_amount, s.payment_method,
             (SELECT COUNT(*) FROM sale_items WHERE sale_id = s.id) as item_count
         FROM sales s WHERE s.user_id = ? ORDER BY s.created_at DESC
     `, [req.user.id]);

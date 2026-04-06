@@ -1,6 +1,7 @@
 /* Attendance & Payroll Page (Chấm công & Lương) */
 const AttendancePage = {
     records: [],
+    storeRecords: [],
     users: [],
     currentMonth: new Date().toISOString().slice(0, 7),
     activeTab: 'attendance',
@@ -9,10 +10,18 @@ const AttendancePage = {
         const content = document.getElementById('content-area');
         const isAdmin = App.user.role === 'admin';
 
+        // Admin: Chấm công | Bảng lương
+        // Staff: Nhập ca làm | Lịch ca cửa hàng | Lương của tôi
+        const tabs = isAdmin
+            ? `<button class="tab-btn active" id="tab-attendance" onclick="AttendancePage.switchTab('attendance')">📋 Chấm công NV</button>
+               <button class="tab-btn" id="tab-payroll" onclick="AttendancePage.switchTab('payroll')">💰 Bảng lương</button>`
+            : `<button class="tab-btn active" id="tab-attendance" onclick="AttendancePage.switchTab('attendance')">📋 Ca làm của tôi</button>
+               <button class="tab-btn" id="tab-store-schedule" onclick="AttendancePage.switchTab('store-schedule')">🏪 Lịch ca cửa hàng</button>
+               <button class="tab-btn" id="tab-payroll" onclick="AttendancePage.switchTab('payroll')">💰 Lương của tôi</button>`;
+
         content.innerHTML = `
             <div class="tabs-header">
-                <button class="tab-btn active" id="tab-attendance" onclick="AttendancePage.switchTab('attendance')">📋 Chấm công</button>
-                <button class="tab-btn" id="tab-payroll" onclick="AttendancePage.switchTab('payroll')">💰 Bảng lương</button>
+                ${tabs}
             </div>
             <div class="table-toolbar">
                 <div class="form-group" style="margin-bottom:0;min-width:180px;">
@@ -30,7 +39,11 @@ const AttendancePage = {
             this.switchTab(this.activeTab);
         });
 
-        document.getElementById('add-att-btn').addEventListener('click', () => this.showAttendanceForm());
+        document.getElementById('add-att-btn').addEventListener('click', () => {
+            // Ẩn nút add khi ở tab store-schedule
+            if (this.activeTab === 'store-schedule') return;
+            this.showAttendanceForm();
+        });
 
         await this.loadUsers();
         this.switchTab('attendance');
@@ -47,10 +60,19 @@ const AttendancePage = {
     async switchTab(tab) {
         this.activeTab = tab;
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        document.getElementById(`tab-${tab}`).classList.add('active');
+        const tabEl = document.getElementById(`tab-${tab}`);
+        if (tabEl) tabEl.classList.add('active');
+
+        // Ẩn/hiện nút thêm
+        const addBtn = document.getElementById('add-att-btn');
+        if (addBtn) {
+            addBtn.style.display = (tab === 'store-schedule') ? 'none' : '';
+        }
 
         if (tab === 'attendance') {
             await this.loadAttendance();
+        } else if (tab === 'store-schedule') {
+            await this.loadStoreSchedule();
         } else {
             await this.loadPayroll();
         }
@@ -60,6 +82,22 @@ const AttendancePage = {
         try {
             this.records = await App.api(`/attendance?month=${this.currentMonth}`);
             this.renderAttendanceTable();
+        } catch (err) {
+            App.toast(err.message, 'error');
+        }
+    },
+
+    async loadStoreSchedule() {
+        // Staff xem ca toàn cửa hàng (chỉ đọc) - gọi API với quyền admin sẽ trả toàn bộ
+        // Staff không có quyền admin, server sẽ lọc theo role
+        // Ta dùng endpoint riêng: /attendance/store?month=... (thêm ở backend)
+        // Hoặc dùng /attendance?month=... nhưng server đã tự lọc theo user nếu là staff
+        // Giải pháp: thêm query param all=true để server trả toàn bộ nếu auth (bất kể role)
+        try {
+            const container = document.getElementById('att-content');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            this.storeRecords = await App.api(`/attendance/store-schedule?month=${this.currentMonth}`);
+            this.renderStoreScheduleTable();
         } catch (err) {
             App.toast(err.message, 'error');
         }
@@ -101,6 +139,62 @@ const AttendancePage = {
         `;
     },
 
+    renderStoreScheduleTable() {
+        const container = document.getElementById('att-content');
+        if (!container) return;
+
+        if (!this.storeRecords || this.storeRecords.length === 0) {
+            container.innerHTML = `
+                <div class="table-container">
+                    <table><tbody><tr><td>
+                        <div class="empty-state"><p>Chưa có dữ liệu chấm công của cửa hàng tháng này</p></div>
+                    </td></tr></tbody></table>
+                </div>`;
+            return;
+        }
+
+        // Nhóm theo ngày
+        const byDate = {};
+        this.storeRecords.forEach(r => {
+            const dateKey = r.work_date ? r.work_date.split('T')[0] : r.work_date;
+            if (!byDate[dateKey]) byDate[dateKey] = [];
+            byDate[dateKey].push(r);
+        });
+
+        const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+        container.innerHTML = `
+            <div style="margin-bottom:12px; padding:12px 16px; background:rgba(99,102,241,0.08); border-radius:8px; border:1px solid rgba(99,102,241,0.15); font-size:0.85rem; color:var(--text-secondary);">
+                📌 Lịch ca toàn cửa hàng tháng <strong>${this.currentMonth}</strong> — Chỉ xem, không thể chỉnh sửa
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead><tr>
+                        <th>Ngày</th><th>Nhân viên</th><th>Giờ làm</th><th>Tăng ca</th><th>Ghi chú</th>
+                    </tr></thead>
+                    <tbody>
+                        ${sortedDates.map(date => {
+                            const dayRecords = byDate[date];
+                            return dayRecords.map((r, idx) => `
+                                <tr style="${r.user_id === App.user.id ? 'background:rgba(99,102,241,0.08);' : ''}">
+                                    ${idx === 0 ? `<td rowspan="${dayRecords.length}" style="font-weight:600;color:var(--text-primary);vertical-align:middle;border-right:1px solid var(--border)">
+                                        ${App.formatDate(r.work_date)}
+                                    </td>` : ''}
+                                    <td style="font-weight:${r.user_id === App.user.id ? '600' : '400'};color:${r.user_id === App.user.id ? 'var(--accent-primary)' : 'var(--text-primary)'}">
+                                        ${r.full_name || r.username}${r.user_id === App.user.id ? ' <span style="font-size:11px;opacity:0.7">(Bạn)</span>' : ''}
+                                    </td>
+                                    <td style="font-weight:600">${r.hours_worked}h</td>
+                                    <td style="color:${r.overtime_hours > 0 ? 'var(--warning)' : 'var(--text-muted)'}; font-weight:600">${r.overtime_hours > 0 ? r.overtime_hours + 'h' : '-'}</td>
+                                    <td>${r.note || '-'}</td>
+                                </tr>
+                            `).join('');
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    },
+
     async loadPayroll() {
         try {
             const payroll = await App.api(`/attendance/payroll?month=${this.currentMonth}`);
@@ -112,6 +206,7 @@ const AttendancePage = {
 
     renderPayrollTable(payroll) {
         const container = document.getElementById('att-content');
+        const isAdmin = App.user.role === 'admin';
         if (!container) return;
 
         if (payroll.length === 0) {
@@ -122,6 +217,7 @@ const AttendancePage = {
         const grandTotal = payroll.reduce((s, r) => s + r.total_salary, 0);
 
         container.innerHTML = `
+            ${isAdmin ? `
             <div class="stat-grid" style="margin-bottom:16px">
                 <div class="stat-card">
                     <div class="stat-icon revenue">💰</div>
@@ -134,10 +230,16 @@ const AttendancePage = {
                     <div class="stat-label">Nhân viên</div>
                 </div>
             </div>
+            <div style="margin-bottom:12px; display:flex; justify-content:flex-end;">
+                <button class="btn btn-success" onclick="AttendancePage.syncPayrollToExpenses(${grandTotal})" style="gap:8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                    Ghi chi phí lương vào sổ (${App.formatCurrency(grandTotal)})
+                </button>
+            </div>` : ''}
             <div class="table-container">
                 <table>
                     <thead><tr>
-                        <th>Nhân viên</th><th>Ngày công</th><th>Tổng giờ</th><th>Tăng ca</th><th>Lương cơ bản</th><th>Lương giờ</th><th>Lương tăng ca</th><th style="color:var(--success)">Tổng lương</th>
+                        <th>Nhân viên</th><th>Ngày công</th><th>Tổng giờ</th><th>Tăng ca</th><th>Lương giờ</th><th>Lương tăng ca</th><th style="color:var(--success)">Tổng lương</th>
                     </tr></thead>
                     <tbody>
                         ${payroll.map(r => `
@@ -146,20 +248,39 @@ const AttendancePage = {
                                 <td style="font-weight:600">${r.total_days}</td>
                                 <td>${r.total_hours}h</td>
                                 <td style="color:${r.total_overtime > 0 ? 'var(--warning)' : 'var(--text-muted)'}">${r.total_overtime > 0 ? r.total_overtime + 'h' : '-'}</td>
-                                <td>${App.formatCurrency(r.base_salary)}</td>
                                 <td>${App.formatCurrency(r.normal_pay)}</td>
                                 <td>${App.formatCurrency(r.overtime_pay)}</td>
                                 <td style="color:var(--success);font-weight:700">${App.formatCurrency(r.total_salary)}</td>
                             </tr>
                         `).join('')}
+                        ${isAdmin ? `
                         <tr style="background:rgba(255,255,255,0.05);font-weight:700">
-                            <td>TỔNG CỘNG</td><td colspan="6"></td>
+                            <td>TỔNG CỘNG</td><td colspan="5"></td>
                             <td style="color:var(--success);font-size:1.05rem">${App.formatCurrency(grandTotal)}</td>
-                        </tr>
+                        </tr>` : ''}
                     </tbody>
                 </table>
             </div>
         `;
+    },
+
+    async syncPayrollToExpenses(totalAmount) {
+        const month = this.currentMonth;
+        if (!confirm(`Ghi chi phí lương tháng ${month} = ${App.formatCurrency(totalAmount)} vào danh sách Chi phí?\n\nLưu ý: Nếu đã ghi trước đó sẽ tạo thêm bản ghi mới.`)) return;
+        try {
+            await App.api('/expenses', {
+                method: 'POST',
+                body: JSON.stringify({
+                    title: `Chi lương nhân viên tháng ${month}`,
+                    amount: totalAmount,
+                    date: new Date().toISOString().split('T')[0],
+                    category: 'Lương'
+                })
+            });
+            App.toast(`✅ Đã ghi chi phí lương tháng ${month} vào sổ!`, 'success');
+        } catch (err) {
+            App.toast('Lỗi: ' + err.message, 'error');
+        }
     },
 
     showAttendanceForm(editId = null) {

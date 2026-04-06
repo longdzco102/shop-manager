@@ -89,7 +89,7 @@ class Attendance {
                 ...r, 
                 normal_pay: normalPay, 
                 overtime_pay: overtimePay, 
-                total_salary: baseSalary + normalPay + overtimePay 
+                total_salary: normalPay + overtimePay 
             };
         });
     }

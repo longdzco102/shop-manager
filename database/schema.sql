@@ -40,6 +40,15 @@ CREATE TABLE IF NOT EXISTS sales (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     total DECIMAL(12, 2) NOT NULL DEFAULT 0,
+    status ENUM('pending', 'completed', 'cancelled') NOT NULL DEFAULT 'pending',
+    customer_name VARCHAR(200) DEFAULT '',
+    customer_phone VARCHAR(20) DEFAULT '',
+    discount_code VARCHAR(100) DEFAULT NULL,
+    discount_amount DECIMAL(12, 2) DEFAULT 0,
+    shipping_name VARCHAR(200) DEFAULT '',
+    shipping_phone VARCHAR(20) DEFAULT '',
+    shipping_address TEXT DEFAULT '',
+    payment_method ENUM('cod', 'momo') NOT NULL DEFAULT 'cod',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
