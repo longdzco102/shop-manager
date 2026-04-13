@@ -101,8 +101,29 @@
         </div>
     </div>
 
-    <!-- Main App -->
     <div id="app" class="app" style="display:none;">
+        <!-- CUSTOMER EXACT HEADER (Hidden by default) -->
+        <header class="header" id="customer-header" style="display: none; background-color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; width: 100%;">
+            <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 15px 20px;">
+                <div class="logo" style="font-size: 24px; font-weight: 700; color: #6366f1; cursor: pointer;">🛍️ MyShop</div>
+                
+                <nav class="nav-links" style="display: flex; align-items: center; gap: 20px;">
+                    <a href="#" class="header-nav-link active" data-page="shop" id="nav-shop" style="text-decoration: none; color: #6366f1; font-weight: 700;">Trang chủ</a>
+                    <a href="#" class="header-nav-link" data-page="about" id="nav-about" style="text-decoration: none; color: #475569; font-weight: 500;">Về chúng tôi</a>
+                    <a href="#" class="header-nav-link" data-page="my-cart" id="nav-my-cart" style="text-decoration: none; color: #475569; font-weight: 500;">🛒 Giỏ hàng <span class="badge" id="cart-nav-badge" style="background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 5px;">0</span></a>
+                    <a href="#" class="header-nav-link" data-page="my-orders" id="nav-my-orders" style="text-decoration: none; color: #475569; font-weight: 500;">📦 Đơn hàng</a>
+                    <a href="#" class="header-nav-link" data-page="checkout" id="nav-checkout" style="display:none;">Thanh toán</a>
+                    
+                    <div id="auth-nav-area" style="display: flex; align-items: center; height: 100%;">
+                        <div style="display: flex; align-items: center;">
+                            <span style="color: #475569; font-weight: 500; margin-right: 15px;">Chào <span id="customer-user-name" style="color: #6366f1; font-weight: bold;">User</span></span>
+                            <button id="customer-logout-btn" style="display: inline-flex; align-items: center; justify-content: center; background-color: #ef4444; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.3s ease; height: 35px;">Đăng xuất</button>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </header>
+
         <!-- Sidebar -->
         <aside id="sidebar" class="sidebar">
             <div class="sidebar-header">
@@ -145,7 +166,7 @@
                 </a>
                 <a href="#" class="nav-item staff-only" data-page="attendance" id="nav-attendance">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                    <span>Chấm công</span>
+                    <span>Quản lý Ca</span>
                 </a>
                 <a href="#" class="nav-item admin-only" data-page="reports" id="nav-reports">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -162,28 +183,7 @@
 
                 <div class="nav-divider"></div>
 
-                <!-- Customer items -->
-                <a href="#" class="nav-item customer-item" data-page="shop" id="nav-shop">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-                    <span>Cửa hàng</span>
-                </a>
-                <a href="#" class="nav-item customer-item" data-page="about" id="nav-about">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
-                    <span>Về chúng tôi</span>
-                </a>
-                <a href="#" class="nav-item customer-item" data-page="my-cart" id="nav-my-cart">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
-                    <span>Giỏ hàng</span>
-                    <span class="nav-badge" id="cart-nav-badge" style="display:none;">0</span>
-                </a>
-                <a href="#" class="nav-item customer-item" data-page="my-orders" id="nav-my-orders">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-                    <span>Đơn hàng của tôi</span>
-                </a>
-                <a href="#" class="nav-item customer-item" data-page="checkout" id="nav-checkout" style="display:none;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                    <span>Thanh toán</span>
-                </a>
+                <!-- Customer items were moved to topbar -->
             </nav>
             <div class="sidebar-footer">
                 <div class="user-info">
@@ -204,14 +204,17 @@
             </div>
         </aside>
 
-        <!-- Main Content -->
+        <!-- Main Content (Admin/Staff) -->
         <main class="main-content">
-            <header class="topbar">
-                <button class="btn-icon sidebar-toggle" id="sidebar-toggle">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-                </button>
-                <h2 id="page-title">Dashboard</h2>
-                <div class="topbar-right">
+            <header class="topbar" id="admin-topbar">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <button class="btn-icon sidebar-toggle" id="sidebar-toggle">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                    </button>
+                    <h2 id="page-title">Dashboard</h2>
+                </div>
+                
+                <div class="topbar-right" style="display: flex; align-items: center; gap: 12px;">
                     <span class="badge" id="role-badge">Admin</span>
                 </div>
             </header>
@@ -237,23 +240,23 @@
     <!-- Toast -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- AI Chatbot Widget (staff/admin only) -->
-    <button class="ai-chat-btn staff-only-element" id="ai-chat-toggle" style="display:none;">
+    <!-- AI Chatbot Widget (customer only) -->
+    <button class="ai-chat-btn customer-only-element" id="ai-chat-toggle" style="display:none;">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2a10 10 0 0 1 10 10c0 5-4.5 9-9.5 9H9a2 2 0 0 1-2-2v-1.1a7.5 7.5 0 0 1-5-6.9C2 6.5 6.5 2 12 2z"/><circle cx="9" cy="10" r="1" fill="#fff"/><circle cx="15" cy="10" r="1" fill="#fff"/></svg>
     </button>
     <div class="ai-chat-window" id="ai-chat-window">
         <div class="ai-header">
             <div class="ai-title">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 0 1 10 10c0 5-4.5 9-9.5 9H9a2 2 0 0 1-2-2v-1.1a7.5 7.5 0 0 1-5-6.9C2 6.5 6.5 2 12 2z"/></svg>
-                Trợ lý AI Gemini
+                Trợ lý mua sắm AI
             </div>
             <button class="ai-close" id="ai-chat-close">&times;</button>
         </div>
         <div class="ai-body" id="ai-chat-body">
-            <div class="ai-msg bot">Xin chào! 👋 Tôi là trợ lý AI thông minh của cửa hàng. Bạn cần tôi trợ giúp gì nào?</div>
+            <div class="ai-msg bot">Xin chào! 👋 Tôi là trợ lý mua sắm MyShop. Hãy hỏi tôi về sản phẩm, giá cả, khuyến mãi nhé!</div>
         </div>
         <div class="ai-footer">
-            <input type="text" id="ai-input" placeholder="Hỏi tôi về doanh thu, tồn kho...">
+            <input type="text" id="ai-input" placeholder="Hỏi tôi về sản phẩm, giá cả, khuyến mãi...">
             <button id="ai-send">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
             </button>

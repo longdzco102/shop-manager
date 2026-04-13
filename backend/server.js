@@ -29,7 +29,7 @@ app.use('/api/expenses', require('./routes/expenses'));
 app.use('/api/dashboard', require('./routes/dashboard'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/procurements', require('./routes/procurements'));
-app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/shifts', require('./routes/shifts'));
 app.use('/api/ai', require('./routes/ai'));
 
 // Admin SPA fallback
@@ -122,17 +122,67 @@ async function initDB() {
             FOREIGN KEY (created_by) REFERENCES users(id)
         )`);
 
-        await db.query(`CREATE TABLE IF NOT EXISTS attendance (
+        // Shift Management Tables
+        await db.query(`CREATE TABLE IF NOT EXISTS shift_types (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            start_time TIME NOT NULL,
+            end_time TIME NOT NULL,
+            pay_multiplier DECIMAL(3,1) DEFAULT 1.0,
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`);
+
+        await db.query(`CREATE TABLE IF NOT EXISTS shift_assignments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            shift_type_id INT NOT NULL,
+            work_date DATE NOT NULL,
+            note VARCHAR(255) DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_assignment (user_id, work_date, shift_type_id),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (shift_type_id) REFERENCES shift_types(id) ON DELETE CASCADE
+        )`);
+
+        await db.query(`CREATE TABLE IF NOT EXISTS shift_requests (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            shift_type_id INT NOT NULL,
+            work_date DATE NOT NULL,
+            note VARCHAR(255) DEFAULT '',
+            status ENUM('pending','approved','rejected') DEFAULT 'pending',
+            reviewed_by INT DEFAULT NULL,
+            reviewed_at TIMESTAMP NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (shift_type_id) REFERENCES shift_types(id) ON DELETE CASCADE
+        )`);
+
+        await db.query(`CREATE TABLE IF NOT EXISTS overtime_records (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
             work_date DATE NOT NULL,
-            hours_worked DECIMAL(4, 1) NOT NULL DEFAULT 8,
-            overtime_hours DECIMAL(4, 1) NOT NULL DEFAULT 0,
-            note VARCHAR(200) DEFAULT '',
+            hours DECIMAL(4,1) NOT NULL DEFAULT 0,
+            reason VARCHAR(255) DEFAULT '',
+            created_by INT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id),
-            UNIQUE KEY unique_user_date (user_id, work_date)
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (created_by) REFERENCES users(id)
         )`);
+
+        // Seed default shift types
+        try {
+            const [st] = await db.query('SELECT id FROM shift_types LIMIT 1');
+            if (st.length === 0) {
+                await db.query(`INSERT INTO shift_types (name, start_time, end_time, pay_multiplier) VALUES
+                    ('Ca sáng', '06:00:00', '14:00:00', 1.0),
+                    ('Ca chiều', '14:00:00', '22:00:00', 1.0),
+                    ('Ca đêm', '22:00:00', '06:00:00', 1.5),
+                    ('Ca hành chính', '08:00:00', '17:00:00', 1.0)`);
+                console.log('✅ Seeded default shift types');
+            }
+        } catch (err) { /* already seeded */ }
 
         // === NEW TABLES ===
 
@@ -216,7 +266,7 @@ async function initDB() {
             console.log('✅ Migration: Expanded user roles');
         } catch (err) { /* already done or not needed */ }
 
-        // Migration: Add discount/shipping fields to sales
+        // Migration: Add discount/shipping/payment fields to sales
         try {
             const [cols] = await db.query('SHOW COLUMNS FROM sales LIKE ?', ['discount_code']);
             if (cols.length === 0) {
@@ -226,6 +276,11 @@ async function initDB() {
                 await db.query('ALTER TABLE sales ADD COLUMN shipping_phone VARCHAR(20) DEFAULT ""');
                 await db.query('ALTER TABLE sales ADD COLUMN shipping_address TEXT');
                 console.log('✅ Migration: Added discount/shipping fields to sales');
+            }
+            const [paymentCols] = await db.query('SHOW COLUMNS FROM sales LIKE ?', ['payment_method']);
+            if (paymentCols.length === 0) {
+                await db.query('ALTER TABLE sales ADD COLUMN payment_method VARCHAR(50) DEFAULT "cod"');
+                console.log('✅ Migration: Added payment_method to sales');
             }
         } catch (err) { console.error('Discount migration:', err.message); }
 

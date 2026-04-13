@@ -1,37 +1,36 @@
-/* Attendance & Payroll Page (Chấm công & Lương) */
+/* ======================================
+   SHIFT MANAGEMENT PAGE (Quản lý Ca)
+   Staff: Đăng ký ca | Ca của tôi | Lịch toàn bộ NV
+   Admin: Cấu hình ca | Sắp xếp ca | Giờ làm thêm | Tính lương
+   ====================================== */
 const AttendancePage = {
-    records: [],
-    storeRecords: [],
+    shiftTypes: [],
     users: [],
     currentMonth: new Date().toISOString().slice(0, 7),
-    activeTab: 'attendance',
+    activeTab: '',
 
     async render() {
         const content = document.getElementById('content-area');
         const isAdmin = App.user.role === 'admin';
 
-        // Admin: Chấm công | Bảng lương
-        // Staff: Nhập ca làm | Lịch ca cửa hàng | Lương của tôi
         const tabs = isAdmin
-            ? `<button class="tab-btn active" id="tab-attendance" onclick="AttendancePage.switchTab('attendance')">📋 Chấm công NV</button>
-               <button class="tab-btn" id="tab-payroll" onclick="AttendancePage.switchTab('payroll')">💰 Bảng lương</button>`
-            : `<button class="tab-btn active" id="tab-attendance" onclick="AttendancePage.switchTab('attendance')">📋 Ca làm của tôi</button>
-               <button class="tab-btn" id="tab-store-schedule" onclick="AttendancePage.switchTab('store-schedule')">🏪 Lịch ca cửa hàng</button>
-               <button class="tab-btn" id="tab-payroll" onclick="AttendancePage.switchTab('payroll')">💰 Lương của tôi</button>`;
+            ? `<button class="tab-btn active" id="tab-config" onclick="AttendancePage.switchTab('config')">⚙️ Cấu hình ca</button>
+               <button class="tab-btn" id="tab-schedule" onclick="AttendancePage.switchTab('schedule')">📅 Sắp xếp ca</button>
+               <button class="tab-btn" id="tab-overtime" onclick="AttendancePage.switchTab('overtime')">⏱️ Giờ làm thêm</button>
+               <button class="tab-btn" id="tab-payroll" onclick="AttendancePage.switchTab('payroll')">💰 Tính lương</button>`
+            : `<button class="tab-btn active" id="tab-register" onclick="AttendancePage.switchTab('register')">📝 Đăng ký ca</button>
+               <button class="tab-btn" id="tab-my-shifts" onclick="AttendancePage.switchTab('my-shifts')">📋 Ca của tôi</button>
+               <button class="tab-btn" id="tab-all-schedule" onclick="AttendancePage.switchTab('all-schedule')">👥 Lịch toàn bộ NV</button>`;
 
         content.innerHTML = `
-            <div class="tabs-header">
-                ${tabs}
-            </div>
+            <div class="tabs-header">${tabs}</div>
             <div class="table-toolbar">
                 <div class="form-group" style="margin-bottom:0;min-width:180px;">
                     <input type="month" id="att-month" value="${this.currentMonth}">
                 </div>
-                <button class="btn btn-primary" id="add-att-btn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> ${isAdmin ? 'Chấm công nhân viên' : 'Nhập ca làm'}</button>
+                <div id="toolbar-actions"></div>
             </div>
-            <div id="att-content">
-                <div class="loading"><div class="spinner"></div></div>
-            </div>
+            <div id="att-content"><div class="loading"><div class="spinner"></div></div></div>
         `;
 
         document.getElementById('att-month').addEventListener('change', (e) => {
@@ -39,375 +38,515 @@ const AttendancePage = {
             this.switchTab(this.activeTab);
         });
 
-        document.getElementById('add-att-btn').addEventListener('click', () => {
-            // Ẩn nút add khi ở tab store-schedule
-            if (this.activeTab === 'store-schedule') return;
-            this.showAttendanceForm();
-        });
+        try { this.shiftTypes = await App.api('/shifts/types'); } catch(e) { this.shiftTypes = []; }
+        try { this.users = await App.api('/users'); } catch(e) { this.users = []; }
 
-        await this.loadUsers();
-        this.switchTab('attendance');
+        this.switchTab(isAdmin ? 'config' : 'register');
     },
 
-    async loadUsers() {
-        try {
-            this.users = await App.api('/users');
-        } catch (err) {
-            console.error('Failed to load users', err);
-        }
-    },
-
-    async switchTab(tab) {
+    switchTab(tab) {
         this.activeTab = tab;
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        const tabEl = document.getElementById(`tab-${tab}`);
-        if (tabEl) tabEl.classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        const el = document.getElementById(`tab-${tab}`);
+        if (el) el.classList.add('active');
 
-        // Ẩn/hiện nút thêm
-        const addBtn = document.getElementById('add-att-btn');
-        if (addBtn) {
-            addBtn.style.display = (tab === 'store-schedule') ? 'none' : '';
-        }
+        const toolbar = document.getElementById('toolbar-actions');
+        toolbar.innerHTML = '';
 
-        if (tab === 'attendance') {
-            await this.loadAttendance();
-        } else if (tab === 'store-schedule') {
-            await this.loadStoreSchedule();
-        } else {
-            await this.loadPayroll();
+        switch(tab) {
+            case 'config': this.renderConfig(); break;
+            case 'schedule': this.renderSchedule(); break;
+            case 'overtime': this.renderOvertime(); break;
+            case 'payroll': this.renderPayroll(); break;
+            case 'register': this.renderRegister(); break;
+            case 'my-shifts': this.renderMyShifts(); break;
+            case 'all-schedule': this.renderAllSchedule(); break;
         }
     },
 
-    async loadAttendance() {
+    // ====================== ADMIN: CẤU HÌNH CA ======================
+    async renderConfig() {
+        const toolbar = document.getElementById('toolbar-actions');
+        toolbar.innerHTML = `<button class="btn btn-primary" onclick="AttendancePage.showShiftTypeForm()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Thêm loại ca</button>`;
+
         try {
-            this.records = await App.api(`/attendance?month=${this.currentMonth}`);
-            this.renderAttendanceTable();
-        } catch (err) {
-            App.toast(err.message, 'error');
-        }
-    },
+            this.shiftTypes = await App.api('/shifts/types');
+        } catch(e) { this.shiftTypes = []; }
 
-    async loadStoreSchedule() {
-        // Staff xem ca toàn cửa hàng (chỉ đọc) - gọi API với quyền admin sẽ trả toàn bộ
-        // Staff không có quyền admin, server sẽ lọc theo role
-        // Ta dùng endpoint riêng: /attendance/store?month=... (thêm ở backend)
-        // Hoặc dùng /attendance?month=... nhưng server đã tự lọc theo user nếu là staff
-        // Giải pháp: thêm query param all=true để server trả toàn bộ nếu auth (bất kể role)
-        try {
-            const container = document.getElementById('att-content');
-            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
-            this.storeRecords = await App.api(`/attendance/store-schedule?month=${this.currentMonth}`);
-            this.renderStoreScheduleTable();
-        } catch (err) {
-            App.toast(err.message, 'error');
-        }
-    },
-
-    renderAttendanceTable() {
         const container = document.getElementById('att-content');
-        const isAdmin = App.user.role === 'admin';
-        if (!container) return;
-
-        if (this.records.length === 0) {
-            container.innerHTML = `<div class="table-container"><table><tbody><tr><td><div class="empty-state"><p>Chưa có dữ liệu chấm công cho tháng này</p></div></td></tr></tbody></table></div>`;
+        if (this.shiftTypes.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>Chưa có loại ca nào. Hãy thêm loại ca mới!</p></div>';
             return;
         }
 
         container.innerHTML = `
-            <div class="table-container">
-                <table>
-                    <thead><tr>
-                        <th>Nhân viên</th><th>Ngày làm</th><th>Giờ làm</th><th>Tăng ca</th><th>Ghi chú</th>${isAdmin ? '<th>Hành động</th>' : ''}
-                    </tr></thead>
-                    <tbody>
-                        ${this.records.map(r => `
-                            <tr>
-                                <td style="font-weight:500;color:var(--text-primary)">${r.full_name || r.username}</td>
-                                <td>${App.formatDate(r.work_date)}</td>
-                                <td style="font-weight:600">${r.hours_worked}h</td>
-                                <td style="color:${r.overtime_hours > 0 ? 'var(--warning)' : 'var(--text-muted)'}; font-weight:600">${r.overtime_hours > 0 ? r.overtime_hours + 'h' : '-'}</td>
-                                <td>${r.note || '-'}</td>
-                                ${isAdmin ? `<td>
-                                    <button class="btn btn-sm btn-outline" style="padding:4px 8px; font-size:12px; border-color:var(--primary); color:var(--primary)" onclick="AttendancePage.showAttendanceForm(${r.id})">Sửa</button>
-                                    <button class="btn btn-sm btn-danger" style="padding:4px 8px; font-size:12px;" onclick="AttendancePage.deleteRecord(${r.id})">Xóa</button>
-                                </td>` : ''}
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
+            <div class="table-container"><table>
+                <thead><tr><th>Tên ca</th><th>Giờ bắt đầu</th><th>Giờ kết thúc</th><th>Hệ số lương</th><th>Trạng thái</th><th>Hành động</th></tr></thead>
+                <tbody>
+                    ${this.shiftTypes.map(s => `<tr>
+                        <td style="font-weight:600;color:var(--text-primary)">${s.name}</td>
+                        <td>${s.start_time?.substring(0,5) || s.start_time}</td>
+                        <td>${s.end_time?.substring(0,5) || s.end_time}</td>
+                        <td><span class="badge" style="${s.pay_multiplier > 1 ? 'background:rgba(245,158,11,0.15);color:#d97706;border:1px solid rgba(245,158,11,0.3)' : ''}">×${Number(s.pay_multiplier).toFixed(1)}</span></td>
+                        <td>${s.is_active ? '<span style="color:var(--success)">✅ Hoạt động</span>' : '<span style="color:var(--text-muted)">❌ Tắt</span>'}</td>
+                        <td><div class="btn-group">
+                            <button class="btn btn-sm btn-secondary" onclick="AttendancePage.showShiftTypeForm(${s.id})">Sửa</button>
+                            <button class="btn btn-sm btn-danger" onclick="AttendancePage.deleteShiftType(${s.id})">Xóa</button>
+                        </div></td>
+                    </tr>`).join('')}
+                </tbody>
+            </table></div>
         `;
     },
 
-    renderStoreScheduleTable() {
-        const container = document.getElementById('att-content');
-        if (!container) return;
-
-        if (!this.storeRecords || this.storeRecords.length === 0) {
-            container.innerHTML = `
-                <div class="table-container">
-                    <table><tbody><tr><td>
-                        <div class="empty-state"><p>Chưa có dữ liệu chấm công của cửa hàng tháng này</p></div>
-                    </td></tr></tbody></table>
-                </div>`;
-            return;
-        }
-
-        // Nhóm theo ngày
-        const byDate = {};
-        this.storeRecords.forEach(r => {
-            const dateKey = r.work_date ? r.work_date.split('T')[0] : r.work_date;
-            if (!byDate[dateKey]) byDate[dateKey] = [];
-            byDate[dateKey].push(r);
+    showShiftTypeForm(editId = null) {
+        const s = editId ? this.shiftTypes.find(x => x.id === editId) : null;
+        App.showModal(s ? 'Sửa loại ca' : 'Thêm loại ca', `
+            <form id="st-form" onsubmit="return false;">
+                <div class="form-group"><label>Tên ca *</label><input type="text" id="st-name" value="${s ? s.name : ''}" required placeholder="Ca sáng, Ca đêm..."></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Giờ bắt đầu *</label><input type="time" id="st-start" value="${s ? (s.start_time?.substring(0,5)||s.start_time) : '08:00'}" required></div>
+                    <div class="form-group"><label>Giờ kết thúc *</label><input type="time" id="st-end" value="${s ? (s.end_time?.substring(0,5)||s.end_time) : '17:00'}" required></div>
+                </div>
+                <div class="form-group"><label>Hệ số lương</label>
+                    <select id="st-multi">
+                        <option value="1.0" ${!s || s.pay_multiplier == 1.0 ? 'selected' : ''}>×1.0 (Bình thường)</option>
+                        <option value="1.5" ${s && s.pay_multiplier == 1.5 ? 'selected' : ''}>×1.5 (Ca đêm)</option>
+                        <option value="2.0" ${s && s.pay_multiplier == 2.0 ? 'selected' : ''}>×2.0 (Ngày lễ)</option>
+                    </select>
+                </div>
+                ${s ? `<div class="form-group"><label><input type="checkbox" id="st-active" ${s.is_active ? 'checked' : ''}> Đang hoạt động</label></div>` : ''}
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="App.closeModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">${s ? 'Cập nhật' : 'Tạo mới'}</button>
+                </div>
+            </form>
+        `);
+        document.getElementById('st-form').addEventListener('submit', async () => {
+            const data = {
+                name: document.getElementById('st-name').value,
+                start_time: document.getElementById('st-start').value,
+                end_time: document.getElementById('st-end').value,
+                pay_multiplier: parseFloat(document.getElementById('st-multi').value)
+            };
+            if (editId) data.is_active = document.getElementById('st-active')?.checked !== false;
+            try {
+                if (editId) await App.api(`/shifts/types/${editId}`, { method: 'PUT', body: JSON.stringify(data) });
+                else await App.api('/shifts/types', { method: 'POST', body: JSON.stringify(data) });
+                App.toast(editId ? 'Cập nhật thành công!' : 'Tạo loại ca thành công!', 'success');
+                App.closeModal();
+                this.renderConfig();
+            } catch(e) { App.toast(e.message, 'error'); }
         });
-
-        const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
-
-        container.innerHTML = `
-            <div style="margin-bottom:12px; padding:12px 16px; background:rgba(99,102,241,0.08); border-radius:8px; border:1px solid rgba(99,102,241,0.15); font-size:0.85rem; color:var(--text-secondary);">
-                📌 Lịch ca toàn cửa hàng tháng <strong>${this.currentMonth}</strong> — Chỉ xem, không thể chỉnh sửa
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead><tr>
-                        <th>Ngày</th><th>Nhân viên</th><th>Giờ làm</th><th>Tăng ca</th><th>Ghi chú</th>
-                    </tr></thead>
-                    <tbody>
-                        ${sortedDates.map(date => {
-                            const dayRecords = byDate[date];
-                            return dayRecords.map((r, idx) => `
-                                <tr style="${r.user_id === App.user.id ? 'background:rgba(99,102,241,0.08);' : ''}">
-                                    ${idx === 0 ? `<td rowspan="${dayRecords.length}" style="font-weight:600;color:var(--text-primary);vertical-align:middle;border-right:1px solid var(--border)">
-                                        ${App.formatDate(r.work_date)}
-                                    </td>` : ''}
-                                    <td style="font-weight:${r.user_id === App.user.id ? '600' : '400'};color:${r.user_id === App.user.id ? 'var(--accent-primary)' : 'var(--text-primary)'}">
-                                        ${r.full_name || r.username}${r.user_id === App.user.id ? ' <span style="font-size:11px;opacity:0.7">(Bạn)</span>' : ''}
-                                    </td>
-                                    <td style="font-weight:600">${r.hours_worked}h</td>
-                                    <td style="color:${r.overtime_hours > 0 ? 'var(--warning)' : 'var(--text-muted)'}; font-weight:600">${r.overtime_hours > 0 ? r.overtime_hours + 'h' : '-'}</td>
-                                    <td>${r.note || '-'}</td>
-                                </tr>
-                            `).join('');
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
     },
 
-    async loadPayroll() {
-        try {
-            const payroll = await App.api(`/attendance/payroll?month=${this.currentMonth}`);
-            this.renderPayrollTable(payroll);
-        } catch (err) {
-            App.toast(err.message, 'error');
-        }
+    async deleteShiftType(id) {
+        if (!confirm('Xóa loại ca này?')) return;
+        try { await App.api(`/shifts/types/${id}`, { method: 'DELETE' }); App.toast('Đã xóa!', 'success'); this.renderConfig(); }
+        catch(e) { App.toast(e.message, 'error'); }
     },
 
-    renderPayrollTable(payroll) {
+    // ====================== ADMIN: SẮP XẾP CA ======================
+    async renderSchedule() {
+        const toolbar = document.getElementById('toolbar-actions');
+        toolbar.innerHTML = `
+            <button class="btn btn-primary" onclick="AttendancePage.showAssignmentForm()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Phân ca</button>
+            <button class="btn btn-success" onclick="AttendancePage.autoSchedule()">🤖 Tự động sắp xếp</button>`;
+
         const container = document.getElementById('att-content');
-        const isAdmin = App.user.role === 'admin';
-        if (!container) return;
+        container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
-        if (payroll.length === 0) {
-            container.innerHTML = `<div class="table-container"><table><tbody><tr><td><div class="empty-state"><p>Không có dữ liệu lương cho tháng này</p></div></td></tr></tbody></table></div>`;
-            return;
-        }
-
-        const grandTotal = payroll.reduce((s, r) => s + r.total_salary, 0);
-
-        container.innerHTML = `
-            ${isAdmin ? `
-            <div class="stat-grid" style="margin-bottom:16px">
-                <div class="stat-card">
-                    <div class="stat-icon revenue">💰</div>
-                    <div class="stat-value">${App.formatCurrency(grandTotal)}</div>
-                    <div class="stat-label">Tổng chi lương tháng ${this.currentMonth}</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon products">👥</div>
-                    <div class="stat-value">${payroll.length}</div>
-                    <div class="stat-label">Nhân viên</div>
-                </div>
-            </div>
-            <div style="margin-bottom:12px; display:flex; justify-content:flex-end;">
-                <button class="btn btn-success" onclick="AttendancePage.syncPayrollToExpenses(${grandTotal})" style="gap:8px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                    Ghi chi phí lương vào sổ (${App.formatCurrency(grandTotal)})
-                </button>
-            </div>` : ''}
-            <div class="table-container">
-                <table>
-                    <thead><tr>
-                        <th>Nhân viên</th><th>Ngày công</th><th>Tổng giờ</th><th>Tăng ca</th><th>Lương giờ</th><th>Lương tăng ca</th><th style="color:var(--success)">Tổng lương</th>
-                    </tr></thead>
-                    <tbody>
-                        ${payroll.map(r => `
-                            <tr>
-                                <td style="font-weight:500;color:var(--text-primary)">${r.full_name || r.username}</td>
-                                <td style="font-weight:600">${r.total_days}</td>
-                                <td>${r.total_hours}h</td>
-                                <td style="color:${r.total_overtime > 0 ? 'var(--warning)' : 'var(--text-muted)'}">${r.total_overtime > 0 ? r.total_overtime + 'h' : '-'}</td>
-                                <td>${App.formatCurrency(r.normal_pay)}</td>
-                                <td>${App.formatCurrency(r.overtime_pay)}</td>
-                                <td style="color:var(--success);font-weight:700">${App.formatCurrency(r.total_salary)}</td>
-                            </tr>
-                        `).join('')}
-                        ${isAdmin ? `
-                        <tr style="background:rgba(255,255,255,0.05);font-weight:700">
-                            <td>TỔNG CỘNG</td><td colspan="5"></td>
-                            <td style="color:var(--success);font-size:1.05rem">${App.formatCurrency(grandTotal)}</td>
-                        </tr>` : ''}
-                    </tbody>
-                </table>
-            </div>
-        `;
-    },
-
-    async syncPayrollToExpenses(totalAmount) {
-        const month = this.currentMonth;
-        if (!confirm(`Ghi chi phí lương tháng ${month} = ${App.formatCurrency(totalAmount)} vào danh sách Chi phí?\n\nLưu ý: Nếu đã ghi trước đó sẽ tạo thêm bản ghi mới.`)) return;
         try {
-            await App.api('/expenses', {
-                method: 'POST',
-                body: JSON.stringify({
-                    title: `Chi lương nhân viên tháng ${month}`,
-                    amount: totalAmount,
-                    date: new Date().toISOString().split('T')[0],
-                    category: 'Lương'
-                })
+            const assignments = await App.api(`/shifts/assignments/all?month=${this.currentMonth}`);
+            // Hiện đề xuất pending
+            let pendingHtml = '';
+            try {
+                const requests = await App.api(`/shifts/requests/all?month=${this.currentMonth}&status=pending`);
+                if (requests.length > 0) {
+                    pendingHtml = `
+                    <div style="margin-bottom:16px;padding:16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;">
+                        <h4 style="margin-bottom:12px;color:#d97706">📬 Đề xuất chờ duyệt (${requests.length})</h4>
+                        <div class="table-container"><table><thead><tr><th>NV</th><th>Ca</th><th>Ngày</th><th>Ghi chú</th><th>Hành động</th></tr></thead><tbody>
+                        ${requests.map(r => `<tr>
+                            <td style="font-weight:500">${r.full_name||r.username}</td>
+                            <td>${r.shift_name}</td>
+                            <td>${App.formatDate(r.work_date)}</td>
+                            <td>${r.note||'-'}</td>
+                            <td><div class="btn-group">
+                                <button class="btn btn-sm btn-success" onclick="AttendancePage.reviewRequest(${r.id},'approved')">✅ Duyệt</button>
+                                <button class="btn btn-sm btn-danger" onclick="AttendancePage.reviewRequest(${r.id},'rejected')">❌ Từ chối</button>
+                            </div></td>
+                        </tr>`).join('')}
+                        </tbody></table></div>
+                    </div>`;
+                }
+            } catch(e) {}
+
+            if (assignments.length === 0 && !pendingHtml) {
+                container.innerHTML = '<div class="empty-state"><p>Chưa có lịch phân ca tháng này</p></div>';
+                return;
+            }
+
+            // Group by date
+            const byDate = {};
+            assignments.forEach(a => {
+                const d = a.work_date?.split('T')[0] || a.work_date;
+                if (!byDate[d]) byDate[d] = [];
+                byDate[d].push(a);
             });
-            App.toast(`✅ Đã ghi chi phí lương tháng ${month} vào sổ!`, 'success');
-        } catch (err) {
-            App.toast('Lỗi: ' + err.message, 'error');
-        }
+            const dates = Object.keys(byDate).sort();
+
+            container.innerHTML = `
+                ${pendingHtml}
+                <div class="table-container"><table>
+                    <thead><tr><th>Ngày</th><th>Nhân viên</th><th>Ca</th><th>Giờ</th><th>Ghi chú</th><th>Xóa</th></tr></thead>
+                    <tbody>
+                    ${dates.map(date => {
+                        const recs = byDate[date];
+                        return recs.map((r, idx) => `<tr>
+                            ${idx === 0 ? `<td rowspan="${recs.length}" style="font-weight:600;vertical-align:middle;border-right:1px solid var(--border)">${App.formatDate(date)}</td>` : ''}
+                            <td style="font-weight:500">${r.full_name||r.username}</td>
+                            <td><span class="badge" style="${r.pay_multiplier > 1 ? 'background:rgba(245,158,11,0.15);color:#d97706' : ''}">${r.shift_name}</span></td>
+                            <td>${r.start_time?.substring(0,5)} - ${r.end_time?.substring(0,5)}</td>
+                            <td>${r.note||'-'}</td>
+                            <td><button class="btn btn-sm btn-danger" onclick="AttendancePage.deleteAssignment(${r.id})">🗑️</button></td>
+                        </tr>`).join('');
+                    }).join('')}
+                    </tbody>
+                </table></div>
+            `;
+        } catch(e) { container.innerHTML = `<div class="empty-state"><p>Lỗi: ${e.message}</p></div>`; }
     },
 
-    showAttendanceForm(editId = null) {
-        const isAdmin = App.user.role === 'admin';
-        const staffOnly = this.users.filter(u => u.role !== 'admin');
+    showAssignmentForm() {
+        const staffList = this.users.filter(u => u.role === 'staff');
         const today = new Date().toISOString().split('T')[0];
-        
-        let record = null;
-        if (editId) {
-            record = this.records.find(r => r.id === editId);
-        }
-        
-        const userOptions = isAdmin 
-            ? `<option value="">-- Chọn nhân viên --</option>` + staffOnly.map(u => `<option value="${u.id}" ${record && record.user_id === u.id ? 'selected' : ''}>${u.full_name || u.username}</option>`).join('')
-            : `<option value="${App.user.id}" selected>${App.user.full_name || App.user.username}</option>`;
+        App.showModal('Phân ca nhân viên', `
+            <form id="assign-form" onsubmit="return false;">
+                <div class="form-group"><label>Nhân viên *</label>
+                    <select id="as-user" required>
+                        <option value="">-- Chọn NV --</option>
+                        ${staffList.map(u => `<option value="${u.id}">${u.full_name||u.username}</option>`).join('')}
+                    </select></div>
+                <div class="form-group"><label>Loại ca *</label>
+                    <select id="as-shift" required>
+                        ${this.shiftTypes.filter(s=>s.is_active).map(s => `<option value="${s.id}">${s.name} (${s.start_time?.substring(0,5)}-${s.end_time?.substring(0,5)}) ×${Number(s.pay_multiplier).toFixed(1)}</option>`).join('')}
+                    </select></div>
+                <div class="form-group"><label>Ngày *</label><input type="date" id="as-date" value="${today}" required></div>
+                <div class="form-group"><label>Ghi chú</label><input type="text" id="as-note" placeholder="Tùy chọn"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="App.closeModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Phân ca</button>
+                </div>
+            </form>
+        `);
+        document.getElementById('assign-form').addEventListener('submit', async () => {
+            try {
+                await App.api('/shifts/assignments', { method: 'POST', body: JSON.stringify({
+                    user_id: parseInt(document.getElementById('as-user').value),
+                    shift_type_id: parseInt(document.getElementById('as-shift').value),
+                    work_date: document.getElementById('as-date').value,
+                    note: document.getElementById('as-note').value
+                })});
+                App.toast('Phân ca thành công!', 'success'); App.closeModal(); this.renderSchedule();
+            } catch(e) { App.toast(e.message, 'error'); }
+        });
+    },
 
-        App.showModal(editId ? 'Sửa ca làm' : (isAdmin ? 'Chấm công nhân viên' : 'Nhập ca làm'), `
-            <form id="att-form" onsubmit="return false;">
-                <input type="hidden" id="af-id" value="${editId || ''}">
-                <div class="form-group" ${!isAdmin ? 'style="display:none;"' : ''}>
-                    <label>Nhân viên *</label>
-                    <select id="af-user" required ${!isAdmin || editId ? 'disabled' : ''}>
-                        ${userOptions}
-                    </select>
+    async autoSchedule() {
+        if (!confirm(`Tự động sắp xếp ca cho tháng ${this.currentMonth}?\n\nHệ thống sẽ phân đều nhân viên vào các ca, đảm bảo mỗi ngày đều có người làm.`)) return;
+        try {
+            const res = await App.api('/shifts/assignments/auto', { method: 'POST', body: JSON.stringify({ month: this.currentMonth }) });
+            App.toast(res.message, 'success');
+            this.renderSchedule();
+        } catch(e) { App.toast(e.message, 'error'); }
+    },
+
+    async deleteAssignment(id) {
+        if (!confirm('Xóa phân ca này?')) return;
+        try { await App.api(`/shifts/assignments/${id}`, { method: 'DELETE' }); App.toast('Đã xóa!', 'success'); this.renderSchedule(); }
+        catch(e) { App.toast(e.message, 'error'); }
+    },
+
+    async reviewRequest(id, status) {
+        const label = status === 'approved' ? 'duyệt' : 'từ chối';
+        if (!confirm(`Bạn muốn ${label} đề xuất này?`)) return;
+        try {
+            await App.api(`/shifts/requests/${id}/review`, { method: 'PUT', body: JSON.stringify({ status }) });
+            App.toast(status === 'approved' ? 'Đã duyệt và tạo lịch!' : 'Đã từ chối!', 'success');
+            this.renderSchedule();
+        } catch(e) { App.toast(e.message, 'error'); }
+    },
+
+    // ====================== ADMIN: GIỜ LÀM THÊM ======================
+    async renderOvertime() {
+        const toolbar = document.getElementById('toolbar-actions');
+        toolbar.innerHTML = `<button class="btn btn-primary" onclick="AttendancePage.showOvertimeForm()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Thêm OT</button>`;
+
+        const container = document.getElementById('att-content');
+        try {
+            const records = await App.api(`/shifts/overtime?month=${this.currentMonth}`);
+            if (records.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Chưa có giờ làm thêm tháng này</p></div>';
+                return;
+            }
+            const totalOT = records.reduce((s,r) => s + Number(r.hours), 0);
+            container.innerHTML = `
+                <div class="stat-grid" style="margin-bottom:16px">
+                    <div class="stat-card"><div class="stat-icon revenue">⏱️</div><div class="stat-value">${totalOT}h</div><div class="stat-label">Tổng OT tháng ${this.currentMonth}</div></div>
+                    <div class="stat-card"><div class="stat-icon products">📝</div><div class="stat-value">${records.length}</div><div class="stat-label">Lượt ghi nhận</div></div>
                 </div>
-                <div class="form-group">
-                    <label>Ngày làm *</label>
-                    <input type="date" id="af-date" value="${record ? record.work_date.split('T')[0] : today}" required ${editId ? 'readonly' : ''}>
-                </div>
-                <div class="form-group">
-                    <label>Ca làm (Shift) *</label>
-                    <select id="af-shift" required onchange="AttendancePage.handleShiftChange()">
-                        <option value="4|Ca sáng (08:00 - 12:00)">Ca sáng (08:00 - 12:00) [4h]</option>
-                        <option value="4|Ca chiều (13:00 - 17:00)">Ca chiều (13:00 - 17:00) [4h]</option>
-                        <option value="4|Ca tối (18:00 - 22:00)">Ca tối (18:00 - 22:00) [4h]</option>
-                        <option value="8|Ca hành chính (08:00 - 17:00)" ${!record ? 'selected' : ''}>Ca hành chính (08:00 - 17:00) [8h]</option>
-                        <option value="custom|Tùy chỉnh" ${record ? 'selected' : ''}>Tùy chỉnh (Nhập giờ thủ công, Nghỉ làm)</option>
-                    </select>
-                </div>
-                <div id="custom-hours-group" style="display:${record ? 'block' : 'none'};">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Giờ làm chính (h) [Nhập 0 nếu nghỉ]</label>
-                            <input type="number" id="af-hours" value="${record ? record.hours_worked : 8}" min="0" max="24" step="0.5">
-                        </div>
-                        <div class="form-group">
-                            <label>Giờ tăng ca (h)</label>
-                            <input type="number" id="af-overtime" value="${record ? record.overtime_hours : 0}" min="0" max="12" step="0.5">
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Ghi chú thêm</label>
-                    <input type="text" id="af-note" value="${record ? record.note : ''}" placeholder="Ví dụ: Đi trễ, Nghỉ phép...">
-                </div>
+                <div class="table-container"><table>
+                    <thead><tr><th>Nhân viên</th><th>Ngày</th><th>Số giờ OT</th><th>Lý do</th><th>Người ghi</th><th>Xóa</th></tr></thead>
+                    <tbody>
+                    ${records.map(r => `<tr>
+                        <td style="font-weight:500">${r.full_name||r.username}</td>
+                        <td>${App.formatDate(r.work_date)}</td>
+                        <td style="font-weight:600;color:var(--warning)">${r.hours}h</td>
+                        <td>${r.reason||'-'}</td>
+                        <td>${r.created_by_name||'-'}</td>
+                        <td><button class="btn btn-sm btn-danger" onclick="AttendancePage.deleteOT(${r.id})">🗑️</button></td>
+                    </tr>`).join('')}
+                    </tbody>
+                </table></div>
+            `;
+        } catch(e) { container.innerHTML = `<div class="empty-state"><p>Lỗi: ${e.message}</p></div>`; }
+    },
+
+    showOvertimeForm() {
+        const staffList = this.users.filter(u => u.role === 'staff');
+        const today = new Date().toISOString().split('T')[0];
+        App.showModal('Thêm giờ làm thêm', `
+            <form id="ot-form" onsubmit="return false;">
+                <div class="form-group"><label>Nhân viên *</label>
+                    <select id="ot-user" required><option value="">-- Chọn --</option>
+                        ${staffList.map(u => `<option value="${u.id}">${u.full_name||u.username}</option>`).join('')}
+                    </select></div>
+                <div class="form-group"><label>Ngày *</label><input type="date" id="ot-date" value="${today}" required></div>
+                <div class="form-group"><label>Số giờ OT *</label><input type="number" id="ot-hours" min="0.5" max="12" step="0.5" value="1" required></div>
+                <div class="form-group"><label>Lý do</label><input type="text" id="ot-reason" placeholder="Hàng nhiều, sự kiện..."></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="App.closeModal()">Hủy</button>
                     <button type="submit" class="btn btn-primary">Lưu</button>
                 </div>
             </form>
         `);
-
-        document.getElementById('att-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const shiftVal = document.getElementById('af-shift').value;
-            let hoursWorked = 0;
-            let overtimeHours = 0;
-            let notePrefix = '';
-            
-            if (shiftVal.startsWith('custom')) {
-                hoursWorked = parseFloat(document.getElementById('af-hours').value) || 0;
-                overtimeHours = parseFloat(document.getElementById('af-overtime').value) || 0;
-                if (!record) notePrefix = hoursWorked === 0 ? 'Nghỉ làm' : 'Ca tùy chỉnh';
-            } else {
-                const parts = shiftVal.split('|');
-                hoursWorked = parseFloat(parts[0]);
-                if (!record) notePrefix = parts[1];
-            }
-            
-            const customNote = document.getElementById('af-note').value;
-            const finalNote = record ? customNote : (customNote && notePrefix ? `${notePrefix} - ${customNote}` : (customNote || notePrefix));
-
-            const id = document.getElementById('af-id').value;
-            const data = {
-                user_id: isAdmin ? parseInt(document.getElementById('af-user').value) : App.user.id,
-                work_date: document.getElementById('af-date').value,
-                hours_worked: hoursWorked,
-                overtime_hours: overtimeHours,
-                note: finalNote
-            };
-
+        document.getElementById('ot-form').addEventListener('submit', async () => {
             try {
-                if (id) {
-                    await App.api(`/attendance/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-                    App.toast('Cập nhật ca làm thành công!', 'success');
-                } else {
-                    await App.api('/attendance', { method: 'POST', body: JSON.stringify(data) });
-                    App.toast('Nhập ca làm thành công!', 'success');
-                }
-                App.closeModal();
-                await this.loadAttendance();
-            } catch (err) {
-                App.toast(err.message, 'error');
-            }
+                await App.api('/shifts/overtime', { method: 'POST', body: JSON.stringify({
+                    user_id: parseInt(document.getElementById('ot-user').value),
+                    work_date: document.getElementById('ot-date').value,
+                    hours: parseFloat(document.getElementById('ot-hours').value),
+                    reason: document.getElementById('ot-reason').value
+                })});
+                App.toast('Đã thêm OT!', 'success'); App.closeModal(); this.renderOvertime();
+            } catch(e) { App.toast(e.message, 'error'); }
         });
     },
 
-    handleShiftChange() {
-        const val = document.getElementById('af-shift').value;
-        const group = document.getElementById('custom-hours-group');
-        if (val.startsWith('custom')) {
-            group.style.display = 'block';
-        } else {
-            group.style.display = 'none';
-        }
+    async deleteOT(id) {
+        if (!confirm('Xóa ghi nhận OT này?')) return;
+        try { await App.api(`/shifts/overtime/${id}`, { method: 'DELETE' }); App.toast('Đã xóa!', 'success'); this.renderOvertime(); }
+        catch(e) { App.toast(e.message, 'error'); }
     },
 
-    async deleteRecord(id) {
-        if (!confirm('Bạn có chắc muốn xóa bản chấm công này?')) return;
+    // ====================== ADMIN: TÍNH LƯƠNG ======================
+    async renderPayroll() {
+        const container = document.getElementById('att-content');
+        container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
         try {
-            await App.api(`/attendance/${id}`, { method: 'DELETE' });
-            App.toast('Đã xóa!', 'success');
-            await this.loadAttendance();
-        } catch (err) {
-            App.toast(err.message, 'error');
-        }
+            const payroll = await App.api(`/shifts/payroll?month=${this.currentMonth}`);
+            if (payroll.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Không có dữ liệu lương tháng này</p></div>';
+                return;
+            }
+            const grandTotal = payroll.reduce((s, r) => s + r.total_salary, 0);
+            container.innerHTML = `
+                <div class="stat-grid" style="margin-bottom:16px">
+                    <div class="stat-card"><div class="stat-icon revenue">💰</div><div class="stat-value">${App.formatCurrency(grandTotal)}</div><div class="stat-label">Tổng chi lương tháng ${this.currentMonth}</div></div>
+                    <div class="stat-card"><div class="stat-icon products">👥</div><div class="stat-value">${payroll.length}</div><div class="stat-label">Nhân viên</div></div>
+                    ${App.user.role === 'admin' ? `
+                    <div class="stat-card" style="display:flex; align-items:center; justify-content:center;">
+                        <button class="btn btn-primary" onclick="AttendancePage.savePayrollToExpenses(${grandTotal}, '${this.currentMonth}')" style="width:100%;height:100%;font-size:16px;font-weight:bold;">
+                            💾 LƯU CHỐT LƯƠNG VÀO CHI PHÍ
+                        </button>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="table-container"><table>
+                    <thead><tr><th>Nhân viên</th><th>Số ca</th><th>Giờ thường</th><th>Giờ đêm (×1.5)</th><th>OT</th><th>Lương thường</th><th>Lương đêm</th><th>Lương OT</th><th style="color:var(--success)">Tổng lương</th></tr></thead>
+                    <tbody>
+                    ${payroll.map(r => `<tr>
+                        <td style="font-weight:500;color:var(--text-primary)">${r.full_name||r.username}</td>
+                        <td style="font-weight:600">${r.total_shifts}</td>
+                        <td>${r.normal_hours}h</td>
+                        <td style="color:${r.night_hours > 0 ? 'var(--warning)' : 'var(--text-muted)'}">${r.night_hours > 0 ? r.night_hours + 'h' : '-'}</td>
+                        <td style="color:${r.total_ot > 0 ? 'var(--warning)' : 'var(--text-muted)'}">${r.total_ot > 0 ? r.total_ot + 'h' : '-'}</td>
+                        <td>${App.formatCurrency(r.normal_pay)}</td>
+                        <td>${App.formatCurrency(r.night_pay)}</td>
+                        <td>${App.formatCurrency(r.ot_pay)}</td>
+                        <td style="color:var(--success);font-weight:700">${App.formatCurrency(r.total_salary)}</td>
+                    </tr>`).join('')}
+                    <tr style="background:rgba(255,255,255,0.05);font-weight:700">
+                        <td>TỔNG CỘNG</td><td colspan="7"></td>
+                        <td style="color:var(--success);font-size:1.05rem">${App.formatCurrency(grandTotal)}</td>
+                    </tr>
+                    </tbody>
+                </table></div>
+            `;
+        } catch(e) { container.innerHTML = `<div class="empty-state"><p>Lỗi: ${e.message}</p></div>`; }
+    },
+
+    // ====================== STAFF: ĐĂNG KÝ CA ======================
+    async renderRegister() {
+        const toolbar = document.getElementById('toolbar-actions');
+        toolbar.innerHTML = `<button class="btn btn-primary" onclick="AttendancePage.showRequestForm()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Đăng ký ca mới</button>`;
+
+        const container = document.getElementById('att-content');
+        try {
+            const requests = await App.api(`/shifts/requests?month=${this.currentMonth}`);
+            if (requests.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Chưa có đề xuất nào. Hãy đăng ký ca làm!</p></div>';
+                return;
+            }
+            container.innerHTML = `
+                <div class="table-container"><table>
+                    <thead><tr><th>Ca</th><th>Ngày</th><th>Ghi chú</th><th>Trạng thái</th><th>Người duyệt</th></tr></thead>
+                    <tbody>
+                    ${requests.map(r => {
+                        const statusMap = { pending: '⏳ Chờ duyệt', approved: '✅ Đã duyệt', rejected: '❌ Từ chối' };
+                        const statusColor = { pending: '#d97706', approved: 'var(--success)', rejected: 'var(--danger)' };
+                        return `<tr>
+                            <td style="font-weight:500">${r.shift_name} (${r.start_time?.substring(0,5)}-${r.end_time?.substring(0,5)})</td>
+                            <td>${App.formatDate(r.work_date)}</td>
+                            <td>${r.note||'-'}</td>
+                            <td style="color:${statusColor[r.status]};font-weight:600">${statusMap[r.status]}</td>
+                            <td>${r.reviewer_name||'-'}</td>
+                        </tr>`;
+                    }).join('')}
+                    </tbody>
+                </table></div>
+            `;
+        } catch(e) { container.innerHTML = `<div class="empty-state"><p>Lỗi: ${e.message}</p></div>`; }
+    },
+
+    showRequestForm() {
+        const today = new Date().toISOString().split('T')[0];
+        App.showModal('Đăng ký ca làm', `
+            <form id="req-form" onsubmit="return false;">
+                <div class="form-group"><label>Loại ca *</label>
+                    <select id="rq-shift" required>
+                        ${this.shiftTypes.filter(s=>s.is_active).map(s => `<option value="${s.id}">${s.name} (${s.start_time?.substring(0,5)}-${s.end_time?.substring(0,5)}) ×${Number(s.pay_multiplier).toFixed(1)}</option>`).join('')}
+                    </select></div>
+                <div class="form-group"><label>Ngày muốn làm *</label><input type="date" id="rq-date" value="${today}" required></div>
+                <div class="form-group"><label>Ghi chú</label><input type="text" id="rq-note" placeholder="Lý do, yêu cầu đặc biệt..."></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="App.closeModal()">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Gửi đề xuất</button>
+                </div>
+            </form>
+        `);
+        document.getElementById('req-form').addEventListener('submit', async () => {
+            try {
+                await App.api('/shifts/requests', { method: 'POST', body: JSON.stringify({
+                    shift_type_id: parseInt(document.getElementById('rq-shift').value),
+                    work_date: document.getElementById('rq-date').value,
+                    note: document.getElementById('rq-note').value
+                })});
+                App.toast('Đã gửi đề xuất! Chờ admin duyệt.', 'success'); App.closeModal(); this.renderRegister();
+            } catch(e) { App.toast(e.message, 'error'); }
+        });
+    },
+
+    // ====================== STAFF: CA CỦA TÔI ======================
+    async renderMyShifts() {
+        const container = document.getElementById('att-content');
+        container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        try {
+            const shifts = await App.api(`/shifts/assignments?month=${this.currentMonth}`);
+            if (shifts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Bạn chưa có ca làm tháng này</p></div>';
+                return;
+            }
+            const totalShifts = shifts.length;
+            const totalHours = shifts.reduce((s, r) => {
+                const st = r.start_time, et = r.end_time;
+                let h = 8;
+                if (st && et) {
+                    const [sh,sm] = st.split(':').map(Number);
+                    const [eh,em] = et.split(':').map(Number);
+                    h = eh > sh ? (eh - sh) : (24 - sh + eh);
+                }
+                return s + h;
+            }, 0);
+
+            container.innerHTML = `
+                <div class="stat-grid" style="margin-bottom:16px">
+                    <div class="stat-card"><div class="stat-icon products">📅</div><div class="stat-value">${totalShifts}</div><div class="stat-label">Tổng ca tháng này</div></div>
+                    <div class="stat-card"><div class="stat-icon revenue">⏱️</div><div class="stat-value">${totalHours}h</div><div class="stat-label">Tổng giờ làm</div></div>
+                </div>
+                <div class="table-container"><table>
+                    <thead><tr><th>Ngày</th><th>Ca</th><th>Giờ</th><th>Hệ số</th><th>Ghi chú</th></tr></thead>
+                    <tbody>
+                    ${shifts.map(r => `<tr>
+                        <td style="font-weight:600">${App.formatDate(r.work_date)}</td>
+                        <td><span class="badge" style="${r.pay_multiplier > 1 ? 'background:rgba(245,158,11,0.15);color:#d97706' : ''}">${r.shift_name}</span></td>
+                        <td>${r.start_time?.substring(0,5)} - ${r.end_time?.substring(0,5)}</td>
+                        <td>×${Number(r.pay_multiplier).toFixed(1)}</td>
+                        <td>${r.note||'-'}</td>
+                    </tr>`).join('')}
+                    </tbody>
+                </table></div>
+            `;
+        } catch(e) { container.innerHTML = `<div class="empty-state"><p>Lỗi: ${e.message}</p></div>`; }
+    },
+
+    // ====================== STAFF: LỊCH TOÀN BỘ NV ======================
+    async renderAllSchedule() {
+        const container = document.getElementById('att-content');
+        container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        try {
+            const shifts = await App.api(`/shifts/assignments/all?month=${this.currentMonth}`);
+            if (shifts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Chưa có lịch phân ca tháng này</p></div>';
+                return;
+            }
+
+            const byDate = {};
+            shifts.forEach(a => {
+                const d = a.work_date?.split('T')[0] || a.work_date;
+                if (!byDate[d]) byDate[d] = [];
+                byDate[d].push(a);
+            });
+            const dates = Object.keys(byDate).sort();
+
+            container.innerHTML = `
+                <div style="margin-bottom:12px;padding:12px 16px;background:rgba(99,102,241,0.08);border-radius:8px;border:1px solid rgba(99,102,241,0.15);font-size:0.85rem;color:var(--text-secondary);">
+                    📌 Lịch ca toàn cửa hàng tháng <strong>${this.currentMonth}</strong> — Chỉ xem
+                </div>
+                <div class="table-container"><table>
+                    <thead><tr><th>Ngày</th><th>Nhân viên</th><th>Ca</th><th>Giờ</th></tr></thead>
+                    <tbody>
+                    ${dates.map(date => {
+                        const recs = byDate[date];
+                        return recs.map((r, idx) => `<tr style="${r.user_id === App.user.id ? 'background:rgba(99,102,241,0.08);' : ''}">
+                            ${idx === 0 ? `<td rowspan="${recs.length}" style="font-weight:600;vertical-align:middle;border-right:1px solid var(--border)">${App.formatDate(date)}</td>` : ''}
+                            <td style="font-weight:${r.user_id === App.user.id ? '600' : '400'};color:${r.user_id === App.user.id ? 'var(--accent-primary)' : 'var(--text-primary)'}">
+                                ${r.full_name||r.username}${r.user_id === App.user.id ? ' <span style="font-size:11px;opacity:0.7">(Bạn)</span>' : ''}
+                            </td>
+                            <td><span class="badge" style="${r.pay_multiplier > 1 ? 'background:rgba(245,158,11,0.15);color:#d97706' : ''}">${r.shift_name}</span></td>
+                            <td>${r.start_time?.substring(0,5)} - ${r.end_time?.substring(0,5)}</td>
+                        </tr>`).join('');
+                    }).join('')}
+                    </tbody>
+                </table></div>
+            `;
+        } catch(e) { container.innerHTML = `<div class="empty-state"><p>Lỗi: ${e.message}</p></div>`; }
     }
 };
 

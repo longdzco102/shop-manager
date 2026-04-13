@@ -68,7 +68,7 @@ class Attendance {
                 COALESCE(u.overtime_rate, 0) as overtime_rate
             FROM users u
             LEFT JOIN attendance a ON u.id = a.user_id AND DATE_FORMAT(a.work_date, "%Y-%m") = ?
-            WHERE u.role != 'admin' ${userId ? 'AND u.id = ?' : ''}
+            WHERE u.role NOT IN ('admin', 'customer') ${userId ? 'AND u.id = ?' : ''}
             GROUP BY u.id, u.full_name, u.username, u.base_salary, u.hourly_rate, u.overtime_rate
             ORDER BY u.full_name
         `;

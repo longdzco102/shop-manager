@@ -36,30 +36,6 @@ const ShopBrowsePage = {
                     <div class="loading"><div class="spinner"></div></div>
                 </div>
             </section>
-
-            <!-- FOOTER -->
-            <footer class="site-footer">
-                <div class="footer-container">
-                    <div class="footer-col">
-                        <h3>THÔNG TIN LIÊN HỆ</h3>
-                        <ul>
-                            <li>✉️ Email: nhom8@gmail.com</li>
-                            <li>📞 Hotline: 0123 456 789</li>
-                            <li>📍 Địa chỉ: Đại học Công nghiệp Hà Nội</li>
-                            <li>👥 Nhóm 8 – Mạng máy tính và Truyền thông dữ liệu</li>
-                        </ul>
-                    </div>
-                    <div class="footer-col">
-                        <h3>SẢN PHẨM CỦA NHÓM 8</h3>
-                        <p><strong>Thiết kế website quản lí nhà hàng, cửa hàng tạp hoá vừa và nhỏ</strong></p>
-                        <p>Ngành: Mạng máy tính và Truyền thông dữ liệu</p>
-                        <p>Trường Đại học Công nghiệp Hà Nội</p>
-                    </div>
-                </div>
-                <div class="footer-bottom">
-                    <p>© 2026 MyShop. Tất cả các quyền được bảo lưu.<br>Made with ❤️ by Nhóm 8</p>
-                </div>
-            </footer>
         `;
         await this.loadProducts();
     },
@@ -130,6 +106,7 @@ const ShopBrowsePage = {
                 <div class="product-card ${p.stock <= 0 ? 'out-of-stock' : ''}">
                     <div class="img-container">
                         <img src="${p.image_url || 'https://placehold.co/300x300/f5f5fa/999?text=' + encodeURIComponent(p.name.substring(0, 8))}" alt="${p.name}" loading="lazy">
+                        ${p.has_discount ? `<span class="discount-badge-absolute">-${Math.round(p.discount_percentage)}%</span>` : ''}
                     </div>
                     <div class="product-info">
                         <div class="product-title">${this._getTag(p)} ${p.name}</div>

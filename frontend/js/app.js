@@ -147,15 +147,22 @@ const App = {
         this.currentPage = null;
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        // Clean up customer mode
+        document.body.classList.remove('customer-mode');
+        const custHeader = document.getElementById('customer-header');
+        if (custHeader) custHeader.style.display = 'none';
+        // Hide AI chat
+        const aiBtn = document.getElementById('ai-chat-toggle');
+        if (aiBtn) aiBtn.style.display = 'none';
+        const aiWindow = document.getElementById('ai-chat-window');
+        if (aiWindow) aiWindow.classList.remove('open');
+        // Show login, hide app
         document.getElementById('app').style.display = 'none';
         document.getElementById('login-screen').style.display = 'flex';
         // Reset forms
         const staffForm = document.getElementById('login-form-staff');
         if (staffForm) staffForm.reset();
         document.getElementById('login-error').style.display = 'none';
-        // Hide AI chat
-        const aiBtn = document.getElementById('ai-chat-toggle');
-        if (aiBtn) aiBtn.style.display = 'none';
     },
 
     // ============ SHOW APP ============
@@ -165,6 +172,8 @@ const App = {
 
         const name = this.user.full_name || this.user.username;
         document.getElementById('user-name').textContent = name;
+        const custNameEl = document.getElementById('customer-user-name');
+        if (custNameEl) custNameEl.textContent = name;
         document.getElementById('user-role').textContent = this.user.role === 'customer' ? 'Khách hàng' : this.user.role;
         document.getElementById('user-avatar').textContent = name.charAt(0).toUpperCase();
         document.getElementById('role-badge').textContent = this.user.role === 'customer' ? 'Khách hàng' : this.user.role;
@@ -180,14 +189,25 @@ const App = {
         document.querySelectorAll('.customer-item').forEach(el => {
             el.style.display = role === 'customer' ? '' : 'none';
         });
+
+        // Add customer-mode class to body for specific CSS
+        if (role === 'customer') {
+            document.body.classList.add('customer-mode');
+            document.getElementById('customer-header').style.display = 'block';
+            document.getElementById('admin-topbar').style.display = 'none';
+        } else {
+            document.body.classList.remove('customer-mode');
+            document.getElementById('customer-header').style.display = 'none';
+            document.getElementById('admin-topbar').style.display = 'flex';
+        }
         // Nav divider
         document.querySelectorAll('.nav-divider').forEach(el => {
             el.style.display = (role === 'admin' || role === 'staff') ? 'none' : 'none'; // always hide for now since roles are separate
         });
 
-        // AI Chatbot - only for staff/admin
+        // AI Chatbot - only for customers
         const aiBtn = document.getElementById('ai-chat-toggle');
-        if (aiBtn) aiBtn.style.display = this.isStaff() ? '' : 'none';
+        if (aiBtn) aiBtn.style.display = this.isCustomer() ? '' : 'none';
 
         // Navigate to default page
         if (this.isCustomer()) {
@@ -202,7 +222,7 @@ const App = {
         this.currentPage = page;
 
         // Update nav active state
-        document.querySelectorAll('.nav-item').forEach(item => {
+        document.querySelectorAll('.nav-item, .header-nav-link').forEach(item => {
             item.classList.toggle('active', item.dataset.page === page);
         });
 
@@ -213,7 +233,7 @@ const App = {
             sales: 'Bán hàng',
             procurements: 'Nhập hàng',
             expenses: 'Quản lý Chi phí',
-            attendance: 'Chấm công & Lương',
+            attendance: 'Quản lý Ca',
             reports: 'Báo cáo',
             users: 'Quản lý Nhân viên',
             discounts: 'Mã Giảm Giá',
@@ -329,7 +349,7 @@ const App = {
         });
 
         // ---- Navigation ----
-        document.querySelectorAll('.nav-item').forEach(item => {
+        document.querySelectorAll('.nav-item, .header-nav-link').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
                 if (item.dataset.page) this.navigate(item.dataset.page);
@@ -343,9 +363,14 @@ const App = {
 
         // Logout
         document.getElementById('logout-btn').addEventListener('click', () => this.logout());
+        const custLogout = document.getElementById('customer-logout-btn');
+        if (custLogout) custLogout.addEventListener('click', () => this.logout());
 
-        // Theme toggle
-        document.getElementById('theme-toggle').addEventListener('click', () => this.toggleTheme());
+        // Theme Toggle
+        const themeBtn = document.getElementById('theme-toggle');
+        if (themeBtn) themeBtn.addEventListener('click', () => this.toggleTheme());
+        const custThemeBtn = document.getElementById('customer-theme-toggle');
+        if (custThemeBtn) custThemeBtn.addEventListener('click', () => this.toggleTheme());
 
         // Modal close
         document.getElementById('modal-close').addEventListener('click', () => this.closeModal());
@@ -397,17 +422,26 @@ const App = {
             const text = input.value.trim();
             if (!text) return;
             input.value = '';
+            sendBtn.disabled = true;
             appendMessage(text, 'user');
             appendMessage('', 'bot', true);
             try {
-                const data = await this.api('/ai/chat', {
+                const res = await fetch('/api/ai/chat', {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${App.token}`
+                    },
                     body: JSON.stringify({ message: text })
                 });
+                const data = await res.json();
                 if (data.setupRequired) App.toast('Admin cần cấu hình GEMINI_API_KEY', 'error');
-                appendMessage(data.reply || data.error, 'bot');
+                appendMessage(data.reply || data.error || 'Không nhận được phản hồi', 'bot');
             } catch (err) {
-                appendMessage('Xin lỗi, tôi đang bận hoặc có lỗi kết nối. Hãy thử lại.', 'bot');
+                appendMessage('❌ Không thể kết nối đến server. Kiểm tra lại kết nối mạng.', 'bot');
+            } finally {
+                sendBtn.disabled = false;
+                input.focus();
             }
         };
 

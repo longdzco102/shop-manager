@@ -2,7 +2,8 @@ const Attendance = require('../models/Attendance');
 const { asyncHandler, AppError } = require('../utils/errorHandler');
 
 const getAll = asyncHandler(async (req, res) => {
-    const userId = req.user.role === 'admin' ? req.query.user_id : req.user.id;
+    // Both admin and staff can view all records (if no user_id filter applied from query)
+    const userId = req.query.user_id ? req.query.user_id : null;
     const records = await Attendance.findAll({
         month: req.query.month,
         user_id: userId
@@ -38,7 +39,7 @@ const create = asyncHandler(async (req, res) => {
 
 const getPayroll = asyncHandler(async (req, res) => {
     const { month } = req.query;
-    const userId = req.user.role === 'admin' ? null : req.user.id;
+    const userId = req.query.user_id ? req.query.user_id : null;
     if (!month) throw new AppError('Month is required (format: YYYY-MM)', 400);
     const payroll = await Attendance.getPayroll(month, userId);
     res.json(payroll);
