@@ -243,7 +243,12 @@ const SalesPage = {
                                     </td>
                                     <td style="color:var(--success);font-weight:600">${App.formatCurrency(s.total)}</td>
                                     <td>${App.formatDateTime(s.created_at)}</td>
-                                    <td><button class="btn btn-sm btn-secondary" onclick="SalesPage.viewSaleDetail(${s.id})">Chi tiết</button></td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-secondary" onclick="SalesPage.viewSaleDetail(${s.id})">Chi tiết</button>
+                                            ${App.isAdmin() ? `<button class="btn btn-sm btn-danger" onclick="SalesPage.deleteSale(${s.id})">Xóa</button>` : ''}
+                                        </div>
+                                    </td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -315,6 +320,17 @@ const SalesPage = {
             App.toast('Cập nhật trạng thái thành công!', 'success');
             App.closeModal();
             this.loadSalesHistory();
+        } catch (err) {
+            App.toast(err.message, 'error');
+        }
+    },
+
+    async deleteSale(id) {
+        if (!confirm('Bạn có chắc muốn xóa đơn hàng #' + id + '?')) return;
+        try {
+            await App.api(`/sales/${id}`, { method: 'DELETE' });
+            App.toast('Đã xóa đơn hàng!', 'success');
+            await this.loadSalesHistory();
         } catch (err) {
             App.toast(err.message, 'error');
         }

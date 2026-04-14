@@ -18,10 +18,10 @@ const ProcurementsPage = {
             <div class="table-container">
                 <table>
                     <thead><tr>
-                        <th>ID</th><th>Sản phẩm</th><th>Số lượng</th><th>Giá nhập</th><th>Nhà cung cấp</th><th>Ngày nhập</th>
+                        <th>ID</th><th>Sản phẩm</th><th>Số lượng</th><th>Giá nhập</th><th>Nhà cung cấp</th><th>Ngày nhập</th>${isAdmin ? '<th>Hành động</th>' : ''}
                     </tr></thead>
                     <tbody id="proc-tbody">
-                        <tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr>
+                        <tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -72,9 +72,11 @@ const ProcurementsPage = {
         if (!tbody) return;
 
         if (items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><p>Chưa có lịch sử nhập hàng</p></div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><p>Chưa có lịch sử nhập hàng</p></div></td></tr>`;
             return;
         }
+
+        const isAdmin = App.user.role === 'admin';
 
         tbody.innerHTML = items.map(pr => `
             <tr>
@@ -84,6 +86,7 @@ const ProcurementsPage = {
                 <td style="color:var(--danger);font-weight:600">${App.formatCurrency(pr.purchase_price)}</td>
                 <td>${pr.supplier || '-'}</td>
                 <td>${App.formatDate(pr.procurement_date)}</td>
+                ${isAdmin ? `<td><button class="btn btn-sm btn-danger" onclick="ProcurementsPage.deleteProcurement(${pr.id})">Xóa</button></td>` : ''}
             </tr>
         `).join('');
     },
@@ -143,6 +146,17 @@ const ProcurementsPage = {
                 App.toast(err.message, 'error');
             }
         });
+    },
+
+    async deleteProcurement(id) {
+        if (!confirm('Bạn có chắc muốn xóa phiếu nhập hàng #' + id + '? Tồn kho sẽ được cập nhật lại.')) return;
+        try {
+            await App.api(`/procurements/${id}`, { method: 'DELETE' });
+            App.toast('Đã xóa phiếu nhập hàng!', 'success');
+            await this.loadProcurements();
+        } catch (err) {
+            App.toast(err.message, 'error');
+        }
     }
 };
 

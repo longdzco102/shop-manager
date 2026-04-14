@@ -121,6 +121,24 @@ class Sale {
         const [result] = await db.query('UPDATE sales SET status = ? WHERE id = ?', [status, id]);
         return result.affectedRows > 0;
     }
+
+    static async delete(id) {
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            // Clean up child FK references
+            await connection.query('DELETE FROM discount_usage WHERE sale_id = ?', [id]);
+            await connection.query('DELETE FROM sale_items WHERE sale_id = ?', [id]);
+            const [result] = await connection.query('DELETE FROM sales WHERE id = ?', [id]);
+            await connection.commit();
+            return result.affectedRows > 0;
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
+    }
 }
 
 module.exports = Sale;

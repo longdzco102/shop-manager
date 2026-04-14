@@ -39,8 +39,34 @@ class User {
     }
 
     static async delete(id) {
-        const [result] = await db.query('DELETE FROM users WHERE id = ?', [id]);
-        return result.affectedRows > 0;
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            // Clean up all child FK references
+            // sale_items references sales(id) ON DELETE CASCADE, so deleting sales auto-removes sale_items
+            // But sale_items also references products(id), so we delete sale_items first for user's sales
+            const [userSales] = await connection.query('SELECT id FROM sales WHERE user_id = ?', [id]);
+            if (userSales.length > 0) {
+                const saleIds = userSales.map(s => s.id);
+                await connection.query(`DELETE FROM discount_usage WHERE sale_id IN (?)`, [saleIds]);
+                await connection.query(`DELETE FROM sale_items WHERE sale_id IN (?)`, [saleIds]);
+                await connection.query('DELETE FROM sales WHERE user_id = ?', [id]);
+            }
+            await connection.query('DELETE FROM expenses WHERE created_by = ?', [id]);
+            await connection.query('DELETE FROM cart_items WHERE user_id = ?', [id]);
+            // Shift management tables already have ON DELETE CASCADE, but just to be safe
+            await connection.query('DELETE FROM shift_assignments WHERE user_id = ?', [id]);
+            await connection.query('DELETE FROM shift_requests WHERE user_id = ?', [id]);
+            await connection.query('DELETE FROM overtime_records WHERE user_id = ?', [id]);
+            const [result] = await connection.query('DELETE FROM users WHERE id = ?', [id]);
+            await connection.commit();
+            return result.affectedRows > 0;
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
     }
 }
 

@@ -15,4 +15,10 @@ const create = asyncHandler(async (req, res) => {
     res.status(201).json({ ...result, message: 'Stock imported successfully.' });
 });
 
-module.exports = { getAll, create };
+const remove = asyncHandler(async (req, res) => {
+    const deleted = await Procurement.delete(req.params.id);
+    if (!deleted) throw new AppError('Procurement not found.', 404);
+    res.json({ message: 'Đã xóa phiếu nhập hàng.' });
+});
+
+module.exports = { getAll, create, remove };

@@ -8,5 +8,6 @@ router.use(authenticate);
 
 router.get('/', procurementController.getAll);
 router.post('/', requireAdmin, procurementController.create);
+router.delete('/:id', requireAdmin, procurementController.remove);
 
 module.exports = router;

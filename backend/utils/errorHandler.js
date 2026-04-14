@@ -27,6 +27,11 @@ const globalErrorHandler = (err, req, res, next) => {
         return res.status(400).json({ error: 'Dữ liệu đã tồn tại (trùng lặp).' });
     }
 
+    // Handle MySQL foreign key constraint error
+    if (err.code === 'ER_ROW_IS_REFERENCED_2' || err.code === 'ER_ROW_IS_REFERENCED') {
+        return res.status(400).json({ error: 'Không thể xóa vì dữ liệu đang được tham chiếu bởi bản ghi khác.' });
+    }
+
     res.status(statusCode).json({ error: message });
 };
 

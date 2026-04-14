@@ -69,8 +69,20 @@ class Discount {
     }
 
     static async delete(id) {
-        const [result] = await db.query('DELETE FROM discounts WHERE id = ?', [id]);
-        return result.affectedRows > 0;
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            // Clean up child FK references
+            await connection.query('DELETE FROM discount_usage WHERE discount_id = ?', [id]);
+            const [result] = await connection.query('DELETE FROM discounts WHERE id = ?', [id]);
+            await connection.commit();
+            return result.affectedRows > 0;
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
     }
 
     static async incrementUsage(id) {

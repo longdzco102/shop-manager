@@ -35,6 +35,29 @@ class Procurement {
             connection.release();
         }
     }
+
+    static async delete(id) {
+        const connection = await db.getConnection();
+        try {
+            await connection.beginTransaction();
+            // Get procurement details to reverse stock
+            const [procs] = await connection.query('SELECT product_id, quantity FROM procurements WHERE id = ?', [id]);
+            if (procs.length > 0) {
+                await connection.query(
+                    'UPDATE products SET stock = GREATEST(stock - ?, 0) WHERE id = ?',
+                    [procs[0].quantity, procs[0].product_id]
+                );
+            }
+            const [result] = await connection.query('DELETE FROM procurements WHERE id = ?', [id]);
+            await connection.commit();
+            return result.affectedRows > 0;
+        } catch (err) {
+            await connection.rollback();
+            throw err;
+        } finally {
+            connection.release();
+        }
+    }
 }
 
 module.exports = Procurement;

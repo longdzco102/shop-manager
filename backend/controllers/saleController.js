@@ -23,4 +23,10 @@ const updateStatus = asyncHandler(async (req, res) => {
     res.json({ message: 'Order status updated successfully' });
 });
 
-module.exports = { getAll, getOne, create, updateStatus };
+const remove = asyncHandler(async (req, res) => {
+    const deleted = await Sale.delete(parseInt(req.params.id));
+    if (!deleted) throw new AppError('Sale not found.', 404);
+    res.json({ message: 'Đã xóa đơn hàng.' });
+});
+
+module.exports = { getAll, getOne, create, updateStatus, remove };
