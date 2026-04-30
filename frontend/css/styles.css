@@ -1329,6 +1329,51 @@ tbody tr:last-child td {
     .search-box {
         max-width: 100%;
     }
+
+    /* Tabs cuộn ngang trên mobile */
+    .tabs-header {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        gap: 6px;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .tab-btn {
+        flex-shrink: 0;
+        font-size: 0.8rem;
+        padding: 8px 12px;
+    }
+
+    /* Topbar gọn */
+    .topbar {
+        padding: 0 12px;
+    }
+    .topbar h2 {
+        font-size: 1rem;
+    }
+
+    /* Modal full width */
+    .modal {
+        width: 95vw;
+        max-width: 95vw;
+        margin: 20px auto;
+    }
+
+    /* Button group xếp dọc */
+    .btn-group {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    /* POS grid 2 cột */
+    .product-grid-select {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Sale layout xếp dọc */
+    .sale-layout {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1337,7 +1382,15 @@ tbody tr:last-child td {
     }
 
     .content-area {
-        padding: 16px;
+        padding: 12px;
+    }
+
+    .topbar h2 {
+        font-size: 0.9rem;
+    }
+
+    .product-grid-select {
+        grid-template-columns: 1fr;
     }
 }
 

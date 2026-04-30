@@ -1138,3 +1138,146 @@ body.customer-mode .content-area .detail-container {
     padding: 20px;
 }
 
+/* =========================================
+   RESPONSIVE — MOBILE (≤768px)
+========================================= */
+@media (max-width: 768px) {
+    /* --- Header: chuyển nav dọc --- */
+    #customer-header .header-container {
+        flex-wrap: wrap;
+    }
+    #customer-header .nav-links {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+        justify-content: center;
+    }
+    #customer-header .header-nav-link {
+        font-size: 13px;
+        padding: 6px 10px;
+    }
+    #auth-nav-area {
+        width: 100%;
+        justify-content: center;
+        margin-top: 8px;
+    }
+
+    /* --- Hero thu nhỏ --- */
+    .hero {
+        padding: 35px 15px;
+    }
+    .hero h1 {
+        font-size: 1.4rem;
+    }
+    .hero p {
+        font-size: 0.85rem;
+    }
+    .search-box {
+        max-width: 100%;
+    }
+
+    /* --- Category tabs cuộn ngang --- */
+    .category-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        gap: 8px;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .tab {
+        flex-shrink: 0;
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+
+    /* --- Product grid: 2 cột trên mobile --- */
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .current-price {
+        font-size: 15px;
+    }
+    .product-info {
+        padding: 10px;
+    }
+    .product-title {
+        font-size: 13px;
+        height: 38px;
+    }
+
+    /* --- Detail page: xếp dọc --- */
+    .detail-card {
+        flex-direction: column;
+        padding: 20px;
+        gap: 20px;
+    }
+    .detail-image-section,
+    .detail-info-section {
+        width: 100%;
+    }
+    .detail-current-price {
+        font-size: 24px;
+    }
+    .action-buttons-left {
+        flex-direction: column;
+    }
+
+    /* --- Cart: xếp dọc --- */
+    .cart-content {
+        flex-direction: column;
+    }
+    .cart-right {
+        width: 100%;
+        position: static;
+    }
+    .item-image img {
+        width: 60px;
+        height: 60px;
+    }
+
+    /* --- About page --- */
+    .about-hero h1 {
+        font-size: 24px;
+    }
+    .section-title-center {
+        font-size: 22px;
+    }
+    .story-content {
+        padding: 20px;
+    }
+    .team-grid {
+        gap: 15px;
+    }
+    .team-card {
+        width: 150px;
+        padding: 20px;
+    }
+    .project-banner-content {
+        padding: 25px 20px;
+    }
+
+    /* --- AI Chatbot lớn hơn trên mobile --- */
+    .ai-chat-window {
+        width: calc(100vw - 20px) !important;
+        right: 10px !important;
+        bottom: 70px !important;
+        max-height: 70vh !important;
+    }
+}
+
+/* =========================================
+   RESPONSIVE — MOBILE NHỎ (≤480px)
+========================================= */
+@media (max-width: 480px) {
+    .product-grid {
+        grid-template-columns: 1fr;
+    }
+    .hero h1 {
+        font-size: 1.2rem;
+    }
+    .section-title {
+        font-size: 18px;
+    }
+}

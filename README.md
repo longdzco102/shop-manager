@@ -1,100 +1,170 @@
-# Shop Manager Web App
+# 🛍️ MyShop - Hệ thống Quản lý Cửa hàng
 
-Hệ thống quản lý cửa hàng trực tuyến toàn diện, bao gồm cả cổng **Shop Front** dành cho khách hàng mua sắm và **Admin Panel** dành cho nhân viên/quản trị viên quản lý. Application được xây dựng dựa trên kiến trúc MVC với Node.js, Express, và MySQL.
-
-## Tính năng nổi bật
-
-### 1. Dành cho Khách hàng (Shop Front)
-- **Cửa hàng hiển thị sản phẩm**: Xem danh sách sản phẩm, tìm kiếm, lọc theo danh mục.
-- **Giỏ hàng (Server-side)**: Hỗ trợ giỏ hàng lưu trữ session chung cho cả khách chưa đăng nhập và đồng bộ khi đăng nhập.
-- **Khuyến mãi & Mã giảm giá**: Hỗ trợ dán mã giảm giá (%) hoặc theo số tiền (VNĐ) trực tiếp khi thanh toán.
-- **Thanh toán & Đăng ký**: Hỗ trợ khách hàng tự do tạo tài khoản, kiểm tra lịch sử mua hàng, và đặt hàng.
-
-### 2. Dành cho Nhân viên (Staff Panel)
-- **Bán hàng tại quầy (POS)**: Dành riêng cho nhân viên thao tác thanh toán trực tiếp tại cửa hàng.
-- **Chấm công (Attendance)**: Nhân viên tự đăng ký ca làm việc hằng ngày, tự theo dõi số giờ làm và báo cáo lương cá nhân.
-- **Bảo mật phân quyền**: Nhân viên chỉ có thể thấy các module phục vụ công việc của họ (Sản phẩm, Bán hàng, Chấm công cá nhân).
-
-### 3. Dành cho Quản trị viên (Admin Panel)
-- **Quản lý toàn diện**: Có quyền xem và thay đổi tất cả các dữ liệu bao gồm Danh mục, Sản phẩm, Bán hàng, Nhập hàng, và Chi phí.
-- **Quản trị Nhân sự**: 
-  - Khởi tạo và quản lý tài khoản nhân viên.
-  - Sửa và duyệt ca làm việc (Chấm công, tăng ca, vắng mặt) của toàn bộ nhân viên. Bảng lương tự động cập nhật.
-- **Quản trị Khuyến mãi**: Tạo và quản lý chủ động mã ưu đãi (Discount Code) trực tiếp trên dashboard.
-- **Báo cáo & Thống kê**: Biểu đồ doanh thu, thu chi lợi nhuận trực quan.
-
-## Kĩ thuật
-- **Backend:** Node.js, Express.js
-- **Database:** MySQL
-- **Frontend:** HTML, CSS, Vanilla JS
-- **Authentication:** JSON Web Tokens (JWT) & bcrypt
-- **Architecture:** MVC (Models, Views, Controllers)
+Ứng dụng quản lý cửa hàng đầy đủ tính năng, gồm **Trang mua sắm** cho khách hàng và **Trang quản trị** cho nhân viên/admin. Xây dựng bằng Node.js + Express + MySQL.
 
 ---
 
-## 🚀 Hướng Dẫn Cài Đặt Tại Máy (Local Development)
+## ✨ Tính năng
 
-Dành cho các nhà phát triển muốn đóng góp hoặc nâng cấp Frontend/Backend của dự án này.
+### Khách hàng
+- Xem và tìm kiếm sản phẩm theo danh mục
+- Giỏ hàng + Thanh toán (hỗ trợ mã giảm giá)
+- Đăng ký tài khoản, xem lịch sử đơn hàng
+- Chatbot AI trợ lý mua sắm (tư vấn sản phẩm, giá cả)
 
-### Yêu Cầu Chuẩn Bị
-Kiểm tra máy tính của bạn đã cài đặt:
-1. **[Node.js](https://nodejs.org/)** (Khuyến khích phiên bản LTS)
-2. **MySQL Server** (Bạn có thể dùng XAMPP, MAMP, hoặc cài trực tiếp MySQL lên máy).
+### Nhân viên (Staff)
+- Bán hàng tại quầy (POS)
+- Đăng ký ca làm việc, xem lương cá nhân
 
-### Các Bước Cài Đặt
+### Quản trị viên (Admin)
+- Dashboard tổng quan doanh thu
+- Quản lý: Sản phẩm, Bán hàng, Nhập hàng, Chi phí
+- Quản lý ca làm việc: phân ca, duyệt yêu cầu, tăng ca, bảng lương
+- Quản lý nhân viên (tạo tài khoản, cấu hình lương)
+- Quản lý khuyến mãi (mã giảm giá + giảm giá sản phẩm)
+- Báo cáo & Biểu đồ thống kê
+- Xuất Excel
 
-**1. Tải Mã Nguồn (Clone)**
-Mở Terminal/Command Prompt và chạy:
-\`\`\`bash
+---
+
+## 🛠️ Công nghệ
+
+| Thành phần | Công nghệ |
+|---|---|
+| Backend | Node.js, Express.js |
+| Database | MySQL (hỗ trợ TiDB Cloud) |
+| Frontend | HTML, CSS, Vanilla JavaScript |
+| Xác thực | JWT + bcrypt |
+| AI Chatbot | OpenRouter API (nhiều model miễn phí) |
+| Biểu đồ | Chart.js |
+| Xuất Excel | SheetJS |
+
+---
+
+## 🚀 Cài đặt
+
+### Yêu cầu
+- **[Node.js](https://nodejs.org/)** (phiên bản LTS)
+- **MySQL Server** (XAMPP, hoặc dùng cloud như TiDB)
+
+### Bước 1 — Tải mã nguồn
+
+```bash
 git clone https://github.com/longdzco102/shop-manager.git
 cd shop-manager
-\`\`\`
+```
 
-**2. Cài Đặt Thư Viện (Dependencies)**
-\`\`\`bash
+### Bước 2 — Cài thư viện
+
+```bash
 npm install
-\`\`\`
+```
 
-**3. Thiết Lập Môi Trường (Environment Variables)**
-Tạo một file có tên là \`.env\` tại thư mục gốc của dự án (`/shop-manager/.env`) và điền các thông số cơ bản sau:
-\`\`\`env
-# Port chạy Server
-PORT=3000
+### Bước 3 — Tạo file `.env`
 
-# Cấu hình kết nối MySQL Database
+Tạo file `.env` ở thư mục gốc (`shop-manager/.env`), điền thông tin database:
+
+**Nếu dùng MySQL tại máy (XAMPP):**
+```env
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=
 DB_NAME=shop_manager
+DB_PORT=3306
 
-# Chìa khóa bảo mật dành cho Đăng nhập
-JWT_SECRET=supersecretkey123_please_change_this_in_production
-\`\`\`
-*(Lưu ý: Bạn có thể thay đổi DB_USER / DB_PASSWORD nếu cấu hình MySQL của bạn yêu cầu mật khẩu).*
+JWT_SECRET=doi_thanh_chuoi_bi_mat_cua_ban
+```
 
-**4. Khởi Tạo Cơ Sở Dữ Liệu (Database)**
-Bật phần mềm quản lý Database của bạn lên (ví dụ: phpMyAdmin nếu là XAMPP) và tạo một database (schema) mới **trống** có tên đúng như cấu hình \`.env\` phía trên:
-> **Tên CSDL:** `shop_manager`
+**Nếu dùng TiDB Cloud:**
+```env
+DB_HOST=gateway01.ap-southeast-1.prod.aws.tidbcloud.com
+DB_USER=xxxxx.root
+DB_PASSWORD=mat_khau_cua_ban
+DB_NAME=ten_database
+DB_PORT=4000
+DB_SSL=true
 
-*💡 Không cần phải tự import bảng nào cả. Hệ thống đã cài sẵn trình khởi tạo tự động, sẽ tự \`CREATE TABLE\` và rải dữ liệu mẫu khi Server chạy lần đầu.*
+JWT_SECRET=doi_thanh_chuoi_bi_mat_cua_ban
+```
 
-**5. Khởi Động Server**
-Mở Terminal và khởi động Nodejs Server:
-\`\`\`bash
-node backend/server.js
-\`\`\`
-Nếu Terminal hiển thị \`✅ Database tables initialized\` và \`🚀 Server running on http://localhost:3000\`, chúc mừng bạn đã cài đặt thành công!
+**Thêm AI Chatbot (tuỳ chọn):**
+```env
+OPENROUTER_API_KEY=sk-or-v1-xxxxxxxxxxxx
+```
+> Lấy API key miễn phí tại [openrouter.ai](https://openrouter.ai/). Không có key thì chatbot sẽ tắt, app vẫn chạy bình thường.
 
-**6. Truy Cập Ứng Dụng Hằng Ngày**
-Mặc định ứng dụng sẽ chạy trên máy chủ của bạn qua địa chỉ:
-- Cổng khách hàng (Shop Front): **[http://localhost:3000/](http://localhost:3000/)**
-- Cổng quản trị Admin/Staff: **[http://localhost:3000/admin/](http://localhost:3000/admin/)**
+### Bước 4 — Tạo database
 
-Khi đăng nhập vào Admin, tài khoản Quản trị mặc định (Nếu database chưa có ai) sẽ tự động được khởi tạo là:
-- **Tài khoản:** \`admin\`
-- **Mật khẩu:** \`admin123\`
+- **MySQL tại máy**: Mở phpMyAdmin → tạo database mới tên `shop_manager`
+- **TiDB Cloud**: Database đã có sẵn trên cloud
 
-## 🔥 Quy Trình Phát Triển Frontend
-1. Các files giao diện hiển thị nằm ở thư mục \`/frontend\`.
-2. Bất cứ khi nào bạn chỉnh sửa file HTML, CSS hay tự thiết kế các modules JS nằm trong các thư mục tương ứng, bạn chỉ cần quay lại trình duyệt và nhấn phím **F5**.
-3. Bạn **không** cần phải Tắt và Khởi động lại Server thông qua phím (Ctrl+C) trừ phi bạn lập trình trên thư mục \`/backend\`. Toàn bộ giao diện tĩnh được phục vụ live từ Web Server.
+> 💡 **Không cần import bảng gì.** Server sẽ tự tạo tất cả bảng và dữ liệu mẫu khi chạy lần đầu.
+
+### Bước 5 — Chạy server
+
+```bash
+npm start
+```
+
+Khi thấy dòng này là thành công:
+```
+✅ Database tables initialized
+🚀 Server running on http://localhost:3000
+```
+
+### Bước 6 — Mở trình duyệt
+
+| Trang | Địa chỉ |
+|---|---|
+| Cửa hàng (Khách) | [http://localhost:3000](http://localhost:3000) |
+| Quản trị (Admin/Staff) | [http://localhost:3000/admin](http://localhost:3000/admin) |
+
+**Tài khoản admin mặc định:**
+- Tên đăng nhập: `admin`
+- Mật khẩu: `admin123`
+
+---
+
+## 📁 Cấu trúc dự án
+
+```
+shop-manager/
+├── backend/
+│   ├── config/         # Cấu hình database
+│   ├── controllers/    # Xử lý logic (14 controller)
+│   ├── middleware/      # Xác thực JWT
+│   ├── models/          # Truy vấn database (11 model)
+│   ├── routes/          # Định tuyến API (14 route)
+│   ├── utils/           # Xử lý lỗi, format response
+│   ├── validators/      # Kiểm tra dữ liệu đầu vào
+│   └── server.js        # Khởi tạo server + tự tạo bảng DB
+├── frontend/
+│   ├── index.html       # Trang chính (khách + admin/staff)
+│   ├── admin/
+│   │   └── index.html   # Trang quản trị riêng
+│   ├── css/
+│   │   ├── styles.css       # CSS admin/staff
+│   │   └── wdacn-style.css  # CSS trang khách hàng
+│   └── js/
+│       ├── app.js           # Logic chung (router, auth, sidebar)
+│       └── pages/           # Module từng trang (14 file)
+├── database/            # File SQL tham khảo
+├── .env                 # Biến môi trường (không push lên git)
+└── package.json
+```
+
+---
+
+## 💻 Phát triển
+
+- Sửa file trong `frontend/` → **F5 trình duyệt** là thấy thay đổi ngay
+- Sửa file trong `backend/` → **phải khởi động lại server** (`Ctrl+C` rồi `npm start`)
+- Frontend không cần build, server phục vụ trực tiếp file tĩnh
+
+---
+
+## 📝 Ghi chú
+
+- Hệ thống tự động tạo bảng và migration khi khởi động, không cần chạy SQL thủ công
+- Tài khoản khách hàng (role `customer`) được tách riêng khỏi danh sách nhân viên
+- Ca làm việc mặc định: Ca sáng (6h-14h), Ca chiều (14h-22h), Ca đêm (22h-6h), Ca hành chính (8h-17h)
