@@ -1359,10 +1359,13 @@ tbody tr:last-child td {
         margin: 20px auto;
     }
 
-    /* Button group xếp dọc */
+    /* Button group nhỏ gọn - giữ ngang nhưng compact */
     .btn-group {
-        flex-direction: column;
         gap: 4px;
+    }
+    .btn-group .btn-sm {
+        padding: 4px 8px;
+        font-size: 0.72rem;
     }
 
     /* POS grid 2 cột */
@@ -1374,6 +1377,40 @@ tbody tr:last-child td {
     .sale-layout {
         grid-template-columns: 1fr;
     }
+
+    /* === BẢNG: thu gọn padding, font nhỏ, cho phép wrap === */
+    thead th {
+        padding: 8px 8px;
+        font-size: 0.68rem;
+        white-space: normal;
+        letter-spacing: 0;
+    }
+    tbody td {
+        padding: 8px 8px;
+        font-size: 0.78rem;
+    }
+
+    /* Stat card value nhỏ hơn trên mobile */
+    .stat-card .stat-value {
+        font-size: 1.3rem;
+    }
+    .stat-card .stat-label {
+        font-size: 0.7rem;
+    }
+    .stat-card {
+        padding: 16px;
+    }
+
+    /* Cart item trong POS gọn hơn */
+    .cart-item {
+        padding: 8px 10px;
+    }
+    .cart-item-name {
+        font-size: 0.82rem;
+    }
+    .cart-item-price {
+        font-size: 0.78rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1382,15 +1419,29 @@ tbody tr:last-child td {
     }
 
     .content-area {
-        padding: 12px;
+        padding: 10px;
     }
 
     .topbar h2 {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
     }
 
     .product-grid-select {
         grid-template-columns: 1fr;
+    }
+
+    /* Bảng siêu compact trên mobile nhỏ */
+    thead th {
+        padding: 6px 6px;
+        font-size: 0.65rem;
+    }
+    tbody td {
+        padding: 6px 6px;
+        font-size: 0.73rem;
+    }
+
+    .stat-card .stat-value {
+        font-size: 1.1rem;
     }
 }
 

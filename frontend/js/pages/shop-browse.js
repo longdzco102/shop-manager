@@ -143,10 +143,16 @@ const ShopBrowsePage = {
     async updateCartBadge() {
         try {
             const cart = await App.api('/cart');
+            const count = cart.itemCount || 0;
             const badge = document.getElementById('cart-nav-badge');
             if (badge) {
-                badge.textContent = cart.itemCount || 0;
-                badge.style.display = (cart.itemCount > 0) ? '' : 'none';
+                badge.textContent = count;
+                badge.style.display = count > 0 ? '' : 'none';
+            }
+            const mobileBadge = document.getElementById('cart-mobile-badge');
+            if (mobileBadge) {
+                mobileBadge.textContent = count;
+                mobileBadge.style.display = count > 0 ? '' : 'none';
             }
         } catch (e) { /* ignore */ }
     },

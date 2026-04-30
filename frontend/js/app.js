@@ -174,6 +174,11 @@ const App = {
         document.getElementById('user-name').textContent = name;
         const custNameEl = document.getElementById('customer-user-name');
         if (custNameEl) custNameEl.textContent = name;
+        // Sync mobile sidebar
+        const mobileNavName = document.getElementById('mobile-nav-username');
+        if (mobileNavName) mobileNavName.textContent = name;
+        const mobileNavAvatar = document.querySelector('.mobile-nav-avatar');
+        if (mobileNavAvatar) mobileNavAvatar.textContent = name.charAt(0).toUpperCase();
         document.getElementById('user-role').textContent = this.user.role === 'customer' ? 'Khách hàng' : this.user.role;
         document.getElementById('user-avatar').textContent = name.charAt(0).toUpperCase();
         document.getElementById('role-badge').textContent = this.user.role === 'customer' ? 'Khách hàng' : this.user.role;

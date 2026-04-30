@@ -106,8 +106,9 @@
         <header class="header" id="customer-header" style="display: none; background-color: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; width: 100%;">
             <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 15px 20px;">
                 <div class="logo" style="font-size: 24px; font-weight: 700; color: #6366f1; cursor: pointer;">🛍️ MyShop</div>
+                <button class="mobile-menu-toggle" id="mobile-menu-toggle" onclick="CustomerMobileNav.toggle()">☰</button>
                 
-                <nav class="nav-links" style="display: flex; align-items: center; gap: 20px;">
+                <nav class="nav-links" id="desktop-nav" style="display: flex; align-items: center; gap: 20px;">
                     <a href="#" class="header-nav-link active" data-page="shop" id="nav-shop" style="text-decoration: none; color: #6366f1; font-weight: 700;">Trang chủ</a>
                     <a href="#" class="header-nav-link" data-page="about" id="nav-about" style="text-decoration: none; color: #475569; font-weight: 500;">Về chúng tôi</a>
                     <a href="#" class="header-nav-link" data-page="my-cart" id="nav-my-cart" style="text-decoration: none; color: #475569; font-weight: 500;">🛒 Giỏ hàng <span class="badge" id="cart-nav-badge" style="background: #ef4444; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 5px;">0</span></a>
@@ -123,6 +124,48 @@
                 </nav>
             </div>
         </header>
+
+        <!-- Mobile Sidebar Overlay (Customer) -->
+        <div class="mobile-nav-overlay" id="mobile-nav-overlay" onclick="CustomerMobileNav.close()"></div>
+        <aside class="mobile-nav-sidebar" id="mobile-nav-sidebar">
+            <div class="mobile-nav-header">
+                <div style="font-size: 20px; font-weight: 700; color: #6366f1;">🛍️ MyShop</div>
+                <button class="mobile-nav-close" onclick="CustomerMobileNav.close()">✕</button>
+            </div>
+            <div class="mobile-nav-user" id="mobile-nav-user">
+                <div class="mobile-nav-avatar">U</div>
+                <div>
+                    <div class="mobile-nav-username" id="mobile-nav-username">User</div>
+                    <div style="font-size: 12px; color: #94a3b8;">Khách hàng</div>
+                </div>
+            </div>
+            <nav class="mobile-nav-links">
+                <a href="#" data-page="shop" class="mobile-nav-item active" onclick="CustomerMobileNav.go('shop')">🏠 Trang chủ</a>
+                <a href="#" data-page="about" class="mobile-nav-item" onclick="CustomerMobileNav.go('about')">ℹ️ Về chúng tôi</a>
+                <a href="#" data-page="my-cart" class="mobile-nav-item" onclick="CustomerMobileNav.go('my-cart')">🛒 Giỏ hàng <span class="badge" id="cart-mobile-badge" style="background:#ef4444;color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;margin-left:auto;">0</span></a>
+                <a href="#" data-page="my-orders" class="mobile-nav-item" onclick="CustomerMobileNav.go('my-orders')">📦 Đơn hàng</a>
+            </nav>
+            <div class="mobile-nav-footer">
+                <button class="mobile-nav-logout" onclick="CustomerMobileNav.close(); document.getElementById('customer-logout-btn').click();">Đăng xuất</button>
+            </div>
+        </aside>
+
+        <script>
+        const CustomerMobileNav = {
+            toggle() {
+                document.getElementById('mobile-nav-sidebar').classList.toggle('open');
+                document.getElementById('mobile-nav-overlay').classList.toggle('open');
+            },
+            close() {
+                document.getElementById('mobile-nav-sidebar').classList.remove('open');
+                document.getElementById('mobile-nav-overlay').classList.remove('open');
+            },
+            go(page) {
+                this.close();
+                if (typeof App !== 'undefined') App.navigate(page);
+            }
+        };
+        </script>
 
         <!-- Sidebar -->
         <aside id="sidebar" class="sidebar">
