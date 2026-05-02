@@ -5,13 +5,13 @@ const { asyncHandler, AppError } = require('../utils/errorHandler');
 
 const login = asyncHandler(async (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) throw new AppError('Username and password are required.', 400);
+    if (!username || !password) throw new AppError('Vui lòng nhập tên đăng nhập và mật khẩu.', 400);
 
     const user = await User.findByUsername(username);
-    if (!user) throw new AppError('Invalid username or password.', 401);
+    if (!user) throw new AppError('Sai thông tin đăng nhập. Vui lòng thử lại.', 401);
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) throw new AppError('Invalid username or password.', 401);
+    if (!isMatch) throw new AppError('Sai thông tin đăng nhập. Vui lòng thử lại.', 401);
 
     const token = jwt.sign(
         { id: user.id, username: user.username, role: user.role, full_name: user.full_name },

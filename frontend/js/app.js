@@ -21,7 +21,8 @@ const App = {
             const res = await fetch(`/api${endpoint}`, { ...options, headers });
             const data = await res.json();
             if (!res.ok) {
-                if (res.status === 401) {
+                if (res.status === 401 && this.token) {
+                    // Token hết hạn khi đang dùng → logout
                     this.logout();
                     throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
                 }

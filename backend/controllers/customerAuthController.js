@@ -35,10 +35,10 @@ const login = asyncHandler(async (req, res) => {
     if (!username || !password) throw new AppError('Thiếu tên đăng nhập hoặc mật khẩu', 400);
 
     const user = await User.findByUsername(username);
-    if (!user || user.role !== 'customer') throw new AppError('Tài khoản không tồn tại', 401);
+    if (!user || user.role !== 'customer') throw new AppError('Sai thông tin đăng nhập. Vui lòng thử lại.', 401);
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) throw new AppError('Mật khẩu không đúng', 401);
+    if (!isMatch) throw new AppError('Sai thông tin đăng nhập. Vui lòng thử lại.', 401);
 
     const token = jwt.sign(
         { id: user.id, username: user.username, role: user.role, full_name: user.full_name },
