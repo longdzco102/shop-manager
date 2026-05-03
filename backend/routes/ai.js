@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/aiController');
-const { authenticate } = require('../middleware/auth');
+const { optionalAuth } = require('../middleware/auth');
 
-router.post('/chat', authenticate, ctrl.chat);
+// optionalAuth: chatbot hoạt động cả khi token hết hạn
+router.post('/chat', optionalAuth, ctrl.chat);
 
 module.exports = router;
