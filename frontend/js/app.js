@@ -441,7 +441,7 @@ const App = {
                     body: JSON.stringify({ message: text })
                 });
                 const data = await res.json();
-                if (data.setupRequired) App.toast('Admin cần cấu hình GEMINI_API_KEY', 'error');
+                if (data.setupRequired) App.toast('Admin cần cấu hình OPENROUTER_API_KEY', 'error');
                 appendMessage(data.reply || data.error || 'Không nhận được phản hồi', 'bot');
             } catch (err) {
                 appendMessage('❌ Không thể kết nối đến server. Kiểm tra lại kết nối mạng.', 'bot');
