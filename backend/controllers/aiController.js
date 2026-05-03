@@ -29,67 +29,104 @@ async function callOpenRouter(apiKey, model, messages) {
     return { ok: false, error: data.error?.message || 'no content' };
 }
 
+// Fallback: trả lời dựa trên từ khóa khi không có API hoặc AI lỗi
+function generateFallbackReply(userMessage, productsTxt) {
+    const msg = userMessage.toLowerCase();
+
+    if (msg.includes('doanh thu') || msg.includes('lợi nhuận') || msg.includes('chi phí') || msg.includes('lương') || msg.includes('nhân viên')) {
+        return 'Xin lỗi, tôi chỉ có thể hỗ trợ bạn về thông tin sản phẩm, giá cả và khuyến mãi thôi ạ! 😊';
+    }
+    if (msg.includes('chào') || msg.includes('hello') || msg.includes('hi ')) {
+        return 'Chào bạn! 👋 Mình là trợ lý AI của MyShop. Bạn muốn tìm sản phẩm gì hôm nay? 😊';
+    }
+    if (msg.includes('giảm giá') || msg.includes('khuyến mãi') || msg.includes('sale')) {
+        return `Dạ đây là một số sản phẩm bên mình ạ:\n${productsTxt}\n\nBạn muốn tìm hiểu thêm sản phẩm nào ạ? 🛍️`;
+    }
+    if (msg.includes('giá') || msg.includes('bao nhiêu') || msg.includes('sản phẩm')) {
+        return `Bạn tham khảo giá các sản phẩm bên mình nhé:\n${productsTxt}\n\nCần tư vấn thêm cứ nhắn mình ạ! 😊`;
+    }
+    if (msg.includes('cảm ơn') || msg.includes('thank')) {
+        return 'Không có gì ạ! Chúc bạn mua sắm vui vẻ! 🎉';
+    }
+
+    return `Mình có thể giúp bạn tìm sản phẩm phù hợp! Hiện bên mình đang có:\n${productsTxt}\n\nBạn quan tâm sản phẩm nào ạ? 😊`;
+}
+
+// Lấy danh sách SP ngắn gọn cho fallback
+async function getProductSummary() {
+    try {
+        const [products] = await db.query(
+            `SELECT p.name, p.price, pd.discount_percentage
+             FROM products p
+             LEFT JOIN product_discounts pd ON pd.product_id = p.id
+                AND NOW() BETWEEN pd.start_date AND pd.end_date
+             WHERE p.stock > 0 ORDER BY p.name LIMIT 5`
+        );
+        if (products.length === 0) return 'Cửa hàng đang cập nhật sản phẩm.';
+        return products.map(p => {
+            const disc = p.discount_percentage && p.discount_percentage > 0;
+            const price = disc ? Math.round(p.price * (1 - p.discount_percentage / 100)) : p.price;
+            return `- ${p.name}: ${price.toLocaleString('vi-VN')}đ` + (disc ? ` (giảm ${Math.round(p.discount_percentage)}%)` : '');
+        }).join('\n');
+    } catch {
+        return 'Đang cập nhật sản phẩm.';
+    }
+}
+
 const chat = asyncHandler(async (req, res) => {
     const { message } = req.body;
     if (!message) throw new AppError('Message is required', 400);
 
     const apiKey = process.env.OPENROUTER_API_KEY;
+
+    // Không có API key → dùng fallback mock
     if (!apiKey) {
-        return res.json({
-            reply: '⚠️ Chatbot chưa kích hoạt. Cần OPENROUTER_API_KEY trong .env',
-            setupRequired: true
-        });
+        console.log('🤖 Mock Chatbot (thiếu API key)');
+        const summary = await getProductSummary();
+        return res.json({ reply: generateFallbackReply(message, summary) });
     }
 
-    // CHỈ lấy thông tin sản phẩm CÔNG KHAI cho khách hàng
+    // Có API key → gọi AI thật
     let productData = '';
     try {
         const [products] = await db.query(
-            `SELECT p.name, p.price, p.stock, p.category,
-                    pd.discount_percentage
+            `SELECT p.name, p.price, p.stock, p.category, pd.discount_percentage
              FROM products p
-             LEFT JOIN product_discounts pd ON pd.product_id = p.id 
+             LEFT JOIN product_discounts pd ON pd.product_id = p.id
                 AND NOW() BETWEEN pd.start_date AND pd.end_date
-             WHERE p.stock >= 0
-             ORDER BY p.name
-             LIMIT 50`
+             WHERE p.stock >= 0 ORDER BY p.name LIMIT 50`
         );
         if (products.length > 0) {
-            const productList = products.map(p => {
-                const hasDiscount = p.discount_percentage && p.discount_percentage > 0;
-                const finalPrice = hasDiscount ? Math.round(p.price * (1 - p.discount_percentage / 100)) : p.price;
+            const list = products.map(p => {
+                const disc = p.discount_percentage && p.discount_percentage > 0;
+                const price = disc ? Math.round(p.price * (1 - p.discount_percentage / 100)) : p.price;
                 const status = p.stock <= 0 ? 'Hết hàng' : (p.stock <= 5 ? 'Sắp hết' : 'Còn hàng');
-                let info = `- ${p.name} | Giá: ${finalPrice.toLocaleString('vi-VN')}đ | ${status}`;
+                let info = `- ${p.name} | Giá: ${price.toLocaleString('vi-VN')}đ | ${status}`;
                 if (p.category) info += ` | Danh mục: ${p.category}`;
-                if (hasDiscount) info += ` | Giảm ${Math.round(p.discount_percentage)}%`;
+                if (disc) info += ` | Giảm ${Math.round(p.discount_percentage)}%`;
                 return info;
             }).join('\n');
-            productData = `\n[DANH SÁCH SẢN PHẨM THỰC TẾ CỦA CỬA HÀNG - CHỈ DÙNG DANH SÁCH NÀY]\n${productList}`;
+            productData = `\n[DANH SÁCH SẢN PHẨM]\n${list}`;
         } else {
-            productData = '\n[CỬA HÀNG HIỆN CHƯA CÓ SẢN PHẨM NÀO]';
+            productData = '\n[CỬA HÀNG CHƯA CÓ SẢN PHẨM]';
         }
     } catch (e) {
-        console.error('Product context err:', e.message);
-        productData = '\n[LỖI TẢI SẢN PHẨM - KHÔNG ĐƯỢC BỊA TÊN SẢN PHẨM]';
+        productData = '\n[LỖI TẢI SẢN PHẨM]';
     }
 
-    // Prompt CHỈ cho phép trả lời về sản phẩm – CHẶN thông tin nhạy cảm
     const prompt = `[BẠN LÀ ShopAI - trợ lý mua sắm của cửa hàng MyShop. Trả lời TIẾNG VIỆT, ngắn gọn, thân thiện, dùng emoji.]
 
 [QUY TẮC BẮT BUỘC]
-1. Bạn CHỈ ĐƯỢC trả lời về: sản phẩm (tên, giá, tình trạng hàng, khuyến mãi, danh mục), tư vấn mua hàng, gợi ý sản phẩm phù hợp.
-2. Bạn KHÔNG ĐƯỢC trả lời về: doanh thu, doanh số, lợi nhuận, chi phí, nhập hàng, lương nhân viên, số liệu kinh doanh, thông tin nội bộ cửa hàng.
-3. Nếu khách hỏi về những thông tin nhạy cảm (doanh thu, lợi nhuận, doanh số, chi phí, nhân viên...), hãy từ chối lịch sự: "Xin lỗi, tôi chỉ có thể hỗ trợ bạn về thông tin sản phẩm, giá cả và khuyến mãi thôi ạ! 😊"
-4. Bạn có thể chitchat nhẹ nhàng (chào hỏi, cảm ơn) nhưng luôn hướng về sản phẩm.
-5. TUYỆT ĐỐI KHÔNG ĐƯỢC bịa ra tên sản phẩm, giá, hoặc khuyến mãi không có trong danh sách bên dưới. Nếu danh sách trống hoặc không có sản phẩm phù hợp, hãy nói "Hiện tại cửa hàng chưa có sản phẩm đó ạ".
-6. Khi gợi ý sản phẩm, CHỈ dùng chính xác tên và giá từ danh sách dưới đây - KHÔNG ĐƯỢC tự nghĩ ra sản phẩm mới.
+1. CHỈ trả lời về: sản phẩm, giá, tình trạng hàng, khuyến mãi, tư vấn mua hàng.
+2. KHÔNG trả lời về: doanh thu, lợi nhuận, chi phí, lương, thông tin nội bộ.
+3. Nếu hỏi thông tin nhạy cảm → từ chối: "Xin lỗi, tôi chỉ hỗ trợ về sản phẩm và khuyến mãi thôi ạ! 😊"
+4. KHÔNG bịa sản phẩm. CHỈ dùng danh sách dưới đây.
 ${productData}
 
-[Câu hỏi khách hàng] ${message}`;
+[Câu hỏi] ${message}`;
 
     const messages = [{ role: 'user', content: prompt }];
 
-    // Thử lần lượt 8 model cho đến khi có kết quả
     for (const model of FREE_MODELS) {
         const result = await callOpenRouter(apiKey, model, messages);
         if (result.ok) {
@@ -99,7 +136,10 @@ ${productData}
         console.warn(`❌ ${model}: ${result.error}`);
     }
 
-    return res.json({ reply: '⏳ AI đang quá tải. Thử lại sau 1-2 phút.' });
+    // Tất cả model lỗi → fallback mock
+    console.log('🤖 Mock Chatbot (tất cả AI lỗi)');
+    const summary = await getProductSummary();
+    return res.json({ reply: generateFallbackReply(message, summary) });
 });
 
 module.exports = { chat };
